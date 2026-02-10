@@ -2,18 +2,18 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA Jaksel - Spatial Analyzer Final</title>
+    <title>SDA Jaksel - Spatial Analyzer FIX</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --navy: #0f172a; --gold: #f59e0b; }
         body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; }
-        #sidebar { width: 360px; background: white; border-right: 4px solid var(--gold); display: flex; flex-direction: column; z-index: 1001; }
+        #sidebar { width: 360px; background: white; border-right: 4px solid var(--gold); display: flex; flex-direction: column; z-index: 1000; }
         .sidebar-header { background: var(--navy); color: white; padding: 20px; border-bottom: 4px solid var(--gold); }
         .sidebar-content { padding: 20px; flex-grow: 1; overflow-y: auto; background: #f8fafc; }
         .upload-box { background: white; border: 2px dashed #cbd5e1; padding: 15px; text-align: center; border-radius: 12px; margin-bottom: 20px; }
         #result-box { background: #e0f2fe; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #bae6fd; display: none; }
         .st-card { background: white; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid var(--gold); box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 0.85rem; }
-        #map { flex-grow: 1; height: 100vh; }
+        #map { flex-grow: 1; height: 100vh; background: #e5e7eb; }
     </style>
 </head>
 <body>
@@ -21,22 +21,22 @@
 <div id="sidebar">
     <div class="sidebar-header">
         <h2 style="margin:0; font-size:1.2rem;">SPATIAL ANALYZER</h2>
-        <div style="font-size: 0.7rem; color: var(--gold);">Sudin SDA Jakarta Selatan</div>
+        <div style="font-size: 0.75rem; color: var(--gold); opacity: 0.8;">Sudin SDA Jakarta Selatan</div>
     </div>
     <div class="sidebar-content">
-        <h3>1. Upload GeoJSON</h3>
+        <h3>1. Upload Catchment (.geojson)</h3>
         <div class="upload-box">
             <input type="file" id="upload-geojson" accept=".geojson">
         </div>
 
         <div id="result-box">
-            <div style="font-size: 0.75rem; color: #0369a1;">Rerata Hujan Wilayah:</div>
-            <div id="final-rain" style="font-size: 1.8rem; font-weight: 800; color: #0c4a6e;">0 mm</div>
+            <div style="font-size: 0.75rem; color: #0369a1; font-weight: bold;">RERATA HUJAN WILAYAH:</div>
+            <div id="final-rain" style="font-size: 2rem; font-weight: 800; color: #0c4a6e;">0 mm</div>
         </div>
 
-        <h3>2. Analisis Stasiun</h3>
+        <h3>2. Detail Analisis</h3>
         <div id="station-list">
-            <p style="color: #94a3b8; font-size: 0.8rem; text-align: center;">Upload GeoJSON untuk memulai analisis.</p>
+            <p style="color: #94a3b8; font-size: 0.85rem;">Silakan upload file GeoJSON untuk melihat hasil analisis spasial.</p>
         </div>
     </div>
 </div>
@@ -47,62 +47,71 @@
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
 <script>
-    // DATA DITANAM DI SINI (DATABASE INTERNAL)
-    // Update angka 'h' (hujan) di sini jika ada data baru
+    // Database Internal 22 Stasiun
     const DATA_MASTER = [
-        { n: "Katulampa", lt: -6.63317, lg: 106.837077, h: 10 },
-        { n: "Depok", lt: -6.40065, lg: 106.831897, h: 15 },
+        { n: "Katulampa", lt: -6.63317, lg: 106.837077, h: 25 },
+        { n: "Depok", lt: -6.40065, lg: 106.831897, h: 10 },
         { n: "Manggarai", lt: -6.20742, lg: 106.848569, h: 5 },
-        { n: "Karet", lt: -6.1981, lg: 106.810097, h: 0 },
-        { n: "Setiabudi Timur", lt: -6.20462, lg: 106.829385, h: 20 },
-        { n: "Melati", lt: -6.20084, lg: 106.817982, h: 12 },
+        { n: "Karet", lt: -6.1981, lg: 106.810097, h: 12 },
+        { n: "Setiabudi Timur", lt: -6.20462, lg: 106.829385, h: 0 },
+        { n: "Melati", lt: -6.20084, lg: 106.817982, h: 15 },
         { n: "Istana", lt: -6.17165, lg: 106.8270424, h: 8 },
         { n: "Krukut Hulu", lt: -6.34434, lg: 106.799081, h: 30 },
-        { n: "Sunter Hulu", lt: -6.31785, lg: 106.9211, h: 25 },
-        { n: "Pesanggrahan", lt: -6.39708, lg: 106.77181, h: 40 },
-        { n: "Angke Hulu", lt: -6.21835, lg: 106.694467, h: 0 },
+        { n: "Sunter Hulu", lt: -6.31785, lg: 106.9211, h: 20 },
+        { n: "Pesanggrahan", lt: -6.39708, lg: 106.77181, h: 18 },
+        { n: "Angke Hulu", lt: -6.21835, lg: 106.694467, h: 45 },
         { n: "Tanjungan", lt: -6.10669, lg: 106.725882, h: 5 },
-        { n: "Tomang Barat", lt: -6.1671, lg: 106.78001, h: 10 },
-        { n: "Teluk Gong", lt: -6.1335, lg: 106.777649, h: 12 },
-        { n: "Pulo Gadung", lt: -6.19097, lg: 106.904213, h: 18 },
-        { n: "Sunter Kodamar", lt: -6.15508, lg: 106.886893, h: 20 },
-        { n: "Rawa Badak", lt: -6.12107, lg: 106.896744, h: 5 },
-        { n: "Pompa Cideng", lt: -6.17355, lg: 106.806328, h: 7 },
-        { n: "St. Meteorologi Kemayoran", lt: -6.15559, lg: 106.84, h: 15 },
-        { n: "Halim Perdana Kusuma", lt: -6.27036, lg: 106.88926, h: 22 },
-        { n: "St. Klimatologi Jawa Barat", lt: -6.5, lg: 106.75, h: 35 },
-        { n: "St. Klimatologi Banten", lt: -6.26151, lg: 106.75084, h: 28 }
+        { n: "Tomang Barat", lt: -6.1671, lg: 106.78001, h: 0 },
+        { n: "Teluk Gong", lt: -6.1335, lg: 106.777649, h: 7 },
+        { n: "Pulo Gadung", lt: -6.19097, lg: 106.904213, h: 12 },
+        { n: "Sunter Kodamar", lt: -6.15508, lg: 106.886893, h: 15 },
+        { n: "Rawa Badak", lt: -6.12107, lg: 106.896744, h: 22 },
+        { n: "Pompa Cideng", lt: -6.17355, lt: 106.806328, h: 4 },
+        { n: "St. Met. Kemayoran", lt: -6.15559, lg: 106.84, h: 10 },
+        { n: "Halim Perdana Kusuma", lt: -6.27036, lg: 106.88926, h: 28 },
+        { n: "St. Klimat. Bogor", lt: -6.5, lg: 106.75, h: 50 },
+        { n: "St. Klimat. Banten", lt: -6.26151, lg: 106.75084, h: 32 }
     ];
 
     const UTM_48S = "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs";
     const WGS84 = "+proj=longlat +datum=WGS84 +no_defs";
 
+    // Inisialisasi Peta
     const map = L.map('map', { zoomControl: false }).setView([-6.28, 106.81], 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    const allStations = DATA_MASTER.map(d => turf.point([d.lg, d.lt], { nama: d.n, hujan: d.h }));
-    const analysisGroup = L.layerGroup().addTo(map);
+    const stationPoints = DATA_MASTER.map(d => turf.point([d.lg, d.lt], { nama: d.n, hujan: d.h }));
+    const layerGroup = L.layerGroup().addTo(map);
     let catchmentLayer;
 
-    // Gambar titik stasiun merah
-    allStations.forEach(pt => {
+    // Gambar Stasiun
+    stationPoints.forEach(pt => {
         L.circleMarker([pt.geometry.coordinates[1], pt.geometry.coordinates[0]], {
-            radius: 5, fillColor: "red", color: "white", weight: 2, fillOpacity: 1
-        }).addTo(map).bindPopup(pt.properties.nama);
+            radius: 6, fillColor: "red", color: "white", weight: 2, fillOpacity: 1
+        }).addTo(map).bindPopup(`<b>${pt.properties.nama}</b><br>Hujan: ${pt.properties.hujan} mm`);
     });
 
     document.getElementById('upload-geojson').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => runAnalysis(JSON.parse(ev.target.result));
-        reader.readAsText(e.target.files[0]);
+        reader.onload = (ev) => {
+            try {
+                const geojson = JSON.parse(ev.target.result);
+                runAnalysis(geojson);
+            } catch (err) {
+                alert("File GeoJSON tidak valid!");
+            }
+        };
+        reader.readAsText(file);
     });
 
     function runAnalysis(geojson) {
-        analysisGroup.clearLayers();
+        layerGroup.clearLayers();
         if(catchmentLayer) map.removeLayer(catchmentLayer);
 
-        // Render Area Biru
+        // 1. Render Area Biru (dengan proteksi koordinat)
         catchmentLayer = L.geoJSON(geojson, {
             coordsToLatLng: function(coords) {
                 if (Math.abs(coords[0]) > 1000) {
@@ -115,47 +124,54 @@
         }).addTo(map);
         map.fitBounds(catchmentLayer.getBounds());
 
-        // Normalisasi Poligon
+        // 2. Normalisasi Data untuk Analisis Spasial
         let poly = geojson.features ? geojson.features[0] : geojson;
         if (poly.geometry.coordinates[0][0][0] > 1000) {
             poly = turf.rewind(turf.transformCoord(poly, UTM_48S, WGS84));
         }
 
-        // Thiessen Logic
-        const bbox = turf.bbox(poly);
-        const voronoi = turf.voronoi(turf.featureCollection(allStations), { 
-            bbox: [bbox[0]-0.5, bbox[1]-0.5, bbox[2]+0.5, bbox[3]+0.5] 
-        });
+        // 3. Thiessen Polygon Logic (Anti-Blank)
+        try {
+            const bbox = turf.bbox(poly);
+            // Bbox diperluas agar mencakup stasiun yang jauh sekalipun
+            const searchArea = [bbox[0]-1, bbox[1]-1, bbox[2]+1, bbox[3]+1];
+            const voronoi = turf.voronoi(turf.featureCollection(stationPoints), { bbox: searchArea });
 
-        const listDiv = document.getElementById('station-list');
-        listDiv.innerHTML = "";
-        let totalWeight = 0, totalArea = 0;
+            const listDiv = document.getElementById('station-list');
+            listDiv.innerHTML = "";
+            let totalWeight = 0, totalArea = 0;
 
-        voronoi.features.forEach((v, i) => {
-            const intersect = turf.intersect(v, poly);
-            if (intersect) {
-                const area = turf.area(intersect) / 10000; // Hektar
-                const st = allStations[i].properties;
-                
-                totalWeight += (st.hujan * area);
-                totalArea += area;
+            voronoi.features.forEach((v, i) => {
+                const intersect = turf.intersect(v, poly);
+                if (intersect) {
+                    const area = turf.area(intersect) / 10000; // Ha
+                    const st = stationPoints[i].properties;
+                    
+                    totalWeight += (st.hujan * area);
+                    totalArea += area;
 
-                L.geoJSON(intersect, { 
-                    style: { color: "orange", weight: 2, fillOpacity: 0.4 } 
-                }).addTo(analysisGroup).bindPopup(`${st.nama}: ${area.toFixed(2)} Ha`);
+                    L.geoJSON(intersect, { 
+                        style: { color: "orange", weight: 1.5, fillOpacity: 0.4 } 
+                    }).addTo(layerGroup);
 
-                listDiv.innerHTML += `
-                    <div class="st-card">
-                        <b>${st.nama}</b><br>
-                        Hujan: ${st.hujan} mm | Luas: ${area.toFixed(2)} Ha
-                    </div>`;
+                    listDiv.innerHTML += `
+                        <div class="st-card">
+                            <b>${st.nama}</b><br>
+                            Hujan: ${st.hujan} mm | Luas: ${area.toFixed(2)} Ha
+                        </div>`;
+                }
+            });
+
+            if (totalArea > 0) {
+                const rerata = totalWeight / totalArea;
+                document.getElementById('result-box').style.display = 'block';
+                document.getElementById('final-rain').innerText = rerata.toFixed(2) + " mm";
+            } else {
+                listDiv.innerHTML = "<p style='color:red;'>⚠️ Tidak ada stasiun yang mencakup area ini.</p>";
             }
-        });
-
-        if (totalArea > 0) {
-            const rerata = totalWeight / totalArea;
-            document.getElementById('result-box').style.display = 'block';
-            document.getElementById('final-rain').innerText = rerata.toFixed(2) + " mm";
+        } catch (e) {
+            console.error(e);
+            alert("Terjadi kesalahan analisis spasial. Pastikan file GeoJSON benar.");
         }
     }
 </script>
