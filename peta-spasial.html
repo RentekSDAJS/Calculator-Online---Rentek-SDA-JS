@@ -2,27 +2,20 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA Jaksel - Advanced Spatial Hydrology</title>
+    <title>SDA Jaksel - Final Spatial Rainfall Analyst</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --accent: #f59e0b; --text: #f8fafc; --teal: #2dd4bf; }
-        body { margin: 0; display: flex; height: 100vh; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
-        
-        #sidebar { width: 500px; background: var(--panel); padding: 20px; overflow-y: auto; border-right: 4px solid var(--accent); box-shadow: 5px 0 15px rgba(0,0,0,0.5); }
+        body { margin: 0; display: flex; height: 100vh; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+        #sidebar { width: 550px; background: var(--panel); padding: 25px; overflow-y: auto; border-right: 4px solid var(--accent); }
         .card { background: var(--bg); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #334155; }
-        h2 { color: var(--accent); margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid #334155; padding-bottom: 10px; }
-        h3 { color: var(--teal); font-size: 1rem; margin-bottom: 10px; }
-        
-        input[type="file"] { width: 100%; padding: 10px; background: #1e293b; color: white; border: 1px solid #475569; border-radius: 6px; }
-        .btn { background: var(--accent); color: #0f172a; padding: 12px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
-        
-        .res-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 15px; }
-        .res-table th, .res-table td { padding: 8px; border: 1px solid #334155; text-align: left; }
+        h2 { color: var(--accent); margin-top: 0; font-size: 1.3rem; text-transform: uppercase; }
+        .res-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 10px; }
+        .res-table th, .res-table td { padding: 10px; border: 1px solid #334155; text-align: left; }
         .res-table th { background: #334155; color: var(--accent); }
         .highlight { font-weight: bold; color: var(--teal); }
-        
+        .btn { background: var(--accent); color: #000; padding: 12px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
         #map { flex: 1; }
-        .loading { display: none; color: var(--accent); font-weight: bold; text-align: center; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -31,15 +24,14 @@
     <h2>DASHBOARD HIDROLOGI SDA JS</h2>
     
     <div class="card">
-        <label><strong>Input Batas Catchment (KML/GeoJSON)</strong></label>
-        <input type="file" id="inputCatchment" accept=".json,.geojson,.kml">
-        <button class="btn" id="btnProses" onclick="calculateAll()" style="display:none;">MULAI HITUNG ANALISIS</button>
-        <div id="loader" class="loading">Sedang Memproses Data...</div>
+        <label><strong>1. Upload Batas Catchment (KML/GeoJSON)</strong></label>
+        <input type="file" id="inputCatchment" accept=".json,.geojson,.kml" style="width:100%; margin-top:10px;">
+        <button class="btn" id="btnProses" onclick="runAnalysis()" style="display:none;">MULAI ANALISIS SEKARANG</button>
     </div>
 
     <div id="spatialResult" style="display:none;">
         <div class="card">
-            <h3>1. Matriks Pengaruh Spasial (Thiessen)</h3>
+            <h3>Matriks Pengaruh Stasiun (Thiessen)</h3>
             <table class="res-table">
                 <thead>
                     <tr><th>Stasiun Pengaruh</th><th>Luas (km²)</th><th>Koefisien (Ci)</th></tr>
@@ -51,14 +43,14 @@
 
     <div id="rainResult" style="display:none;">
         <div class="card">
-            <h3>2. Rerata Hujan Wilayah (2000-2024)</h3>
+            <h3>Rerata Hujan Wilayah Tahunan</h3>
             <table class="res-table">
                 <thead>
-                    <tr><th>Tahun</th><th>P-Wilayah (mm)</th></tr>
+                    <tr><th>Tahun</th><th>Curah Hujan Wilayah (mm)</th></tr>
                 </thead>
                 <tbody id="body-rain"></tbody>
             </table>
-            <button class="btn" style="background: var(--teal); color: #000;" onclick="downloadData()">DOWNLOAD HASIL (.CSV)</button>
+            <button class="btn" style="background: var(--teal);" onclick="downloadCSV()">DOWNLOAD HASIL (.CSV)</button>
         </div>
     </div>
 </div>
@@ -70,10 +62,8 @@
 <script src="https://unpkg.com/@mapbox/togeojson"></script>
 
 <script>
-    // Link CSV Hardcoded (Input User)
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRMWvfZncodk-zHrNy7h586o6VKEbMTxe8NCTeV61xL-LbBKSySSqqbxay_eD7LzBhp1PQVgknLoGzx/pub?output=csv";
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRMWvfZncodk-zHrNy7h586o6VKEbMTxe8NCTeV61xL-LbBKSySSqqbxay_eD7LzBhp1PQVgknLoGzx/pub?output=csv";
 
-    // Koordinat Stasiun
     const STATIONS = [
         { n: "Kemayoran", lat: -6.15559, lng: 106.84 },
         { n: "Halim", lat: -6.27036, lng: 106.88926 },
@@ -99,15 +89,14 @@
         { n: "Pompa Cideng", lat: -6.17355, lng: 106.806328 }
     ];
 
-    let thiessenData = [];
-    let catchmentGeoJSON = null;
-
+    let thiessenFactors = [];
+    let catchmentData = null;
     const map = L.map('map').setView([-6.28, 106.82], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.3 }).addTo(map);
-    const layerGroup = L.layerGroup().addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.4 }).addTo(map);
+    const layerGrp = L.layerGroup().addTo(map);
 
-    const stationPts = STATIONS.map(s => {
-        L.circleMarker([s.lat, s.lng], { radius: 4, color: '#f59e0b' }).addTo(map).bindTooltip(s.n);
+    const pts = STATIONS.map(s => {
+        L.circleMarker([s.lat, s.lng], { radius: 4, color: 'orange' }).addTo(map).bindTooltip(s.n);
         return turf.point([s.lng, s.lat], { name: s.n });
     });
 
@@ -115,87 +104,76 @@
         const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = function(ev) {
-            catchmentGeoJSON = file.name.endsWith('.kml') ? toGeoJSON.kml(new DOMParser().parseFromString(ev.target.result, "text/xml")) : JSON.parse(ev.target.result);
+            catchmentData = file.name.endsWith('.kml') ? toGeoJSON.kml(new DOMParser().parseFromString(ev.target.result, "text/xml")) : JSON.parse(ev.target.result);
             document.getElementById('btnProses').style.display = 'block';
         };
         reader.readAsText(file);
     };
 
-    async function calculateAll() {
-        document.getElementById('loader').style.display = 'block';
-        layerGroup.clearLayers();
+    async function runAnalysis() {
+        layerGrp.clearLayers();
+        const poly = catchmentData.features ? catchmentData.features[0] : catchmentData;
+        L.geoJSON(poly, { style: { color: 'red', weight: 2, fillOpacity: 0.1 } }).addTo(layerGrp);
+        map.fitBounds(L.geoJSON(poly).getBounds());
 
-        // 1. Spasial Analysis
-        const polygon = catchmentGeoJSON.features ? catchmentGeoJSON.features[0] : catchmentGeoJSON;
-        L.geoJSON(polygon, { style: { color: 'red', weight: 2, fillOpacity: 0.05 } }).addTo(layerGroup);
-        map.fitBounds(L.geoJSON(polygon).getBounds());
+        const bbox = turf.bbox(poly);
+        const voronoi = turf.voronoi(turf.featureCollection(pts), { bbox: [bbox[0]-0.2, bbox[1]-0.2, bbox[2]+0.2, bbox[3]+0.2] });
 
-        const bbox = turf.bbox(polygon);
-        const voronoi = turf.voronoi(turf.featureCollection(stationPts), { bbox: [bbox[0]-0.2, bbox[1]-0.2, bbox[2]+0.2, bbox[3]+0.2] });
-
-        let totalArea = 0;
-        thiessenData = [];
+        let totalA = 0;
+        thiessenFactors = [];
 
         voronoi.features.forEach((cell, i) => {
-            const intersect = turf.intersect(cell, polygon);
+            const intersect = turf.intersect(cell, poly);
             if (intersect) {
-                const area = turf.area(intersect) / 1000000; // km2
-                thiessenData.push({ name: STATIONS[i].n, area: area });
-                totalArea += area;
-                L.geoJSON(intersect, { style: { color: '#38bdf8', weight: 1, fillOpacity: 0.2 } }).addTo(layerGroup);
+                const a = turf.area(intersect) / 1000000;
+                thiessenFactors.push({ name: STATIONS[i].n, area: a });
+                totalA += a;
+                L.geoJSON(intersect, { style: { color: '#00f', weight: 1, fillOpacity: 0.2 } }).addTo(layerGrp);
             }
         });
 
-        // Tampilkan Tabel Spasial
-        let spatialHtml = "";
-        thiessenData.forEach(item => {
-            item.ci = item.area / totalArea;
-            spatialHtml += `<tr><td>${item.name}</td><td>${item.area.toFixed(2)}</td><td class="highlight">${item.ci.toFixed(4)}</td></tr>`;
+        let sHtml = "";
+        thiessenFactors.forEach(f => {
+            f.ci = f.area / totalA;
+            sHtml += `<tr><td>${f.name}</td><td>${f.area.toFixed(3)}</td><td class="highlight">${f.ci.toFixed(4)}</td></tr>`;
         });
-        document.getElementById('body-spatial').innerHTML = spatialHtml;
+        document.getElementById('body-spatial').innerHTML = sHtml;
         document.getElementById('spatialResult').style.display = 'block';
 
-        // 2. Rain Data Analysis
-        try {
-            const res = await fetch(SHEET_CSV_URL);
-            const csv = await res.text();
-            const lines = csv.split('\n').filter(l => l.trim() !== "");
-            const headers = lines[0].split(',').map(h => h.trim().replace(/[\r\n]/g, " ").replace(/"/g, ""));
+        // Hitung Hujan
+        const res = await fetch(CSV_URL);
+        const text = await res.text();
+        const lines = text.split('\n').filter(l => l.trim() !== "");
+        
+        // Membersihkan Header (Krusial: Menghapus "Enter" di dalam teks)
+        const headers = lines[0].split(',').map(h => h.trim().replace(/[\r\n]/g, " ").replace(/"/g, ""));
 
-            let rainHtml = "";
-            for (let i = 1; i < lines.length; i++) {
-                const cols = lines[i].split(',');
-                const tahun = cols[0];
-                let p_wilayah = 0;
+        let rHtml = "";
+        for (let j = 1; j < lines.length; j++) {
+            const cols = lines[j].split(',');
+            const thn = cols[0];
+            let p_wil = 0;
 
-                headers.forEach((h, idx) => {
-                    const stMatch = thiessenData.find(t => h.toLowerCase().includes(t.name.toLowerCase()) || t.name.toLowerCase().includes(h.toLowerCase()));
-                    if (stMatch) {
-                        const rainVal = parseFloat(cols[idx]) || 0;
-                        p_wilayah += rainVal * stMatch.ci;
-                    }
-                });
+            headers.forEach((h, idx) => {
+                const match = thiessenFactors.find(f => h.toLowerCase().includes(f.name.toLowerCase()) || f.name.toLowerCase().includes(h.toLowerCase()));
+                if (match) {
+                    p_wil += (parseFloat(cols[idx]) || 0) * match.ci;
+                }
+            });
 
-                if (p_wilayah > 0) rainHtml += `<tr><td>${tahun}</td><td class="highlight">${p_wilayah.toFixed(2)}</td></tr>`;
-            }
-            document.getElementById('body-rain').innerHTML = rainHtml;
-            document.getElementById('rainResult').style.display = 'block';
-        } catch (e) { alert("Error mengambil data hujan!"); }
-
-        document.getElementById('loader').style.display = 'none';
+            if (p_wil > 0) rHtml += `<tr><td>${thn}</td><td class="highlight">${p_wil.toFixed(2)}</td></tr>`;
+        }
+        document.getElementById('body-rain').innerHTML = rHtml;
+        document.getElementById('rainResult').style.display = 'block';
     }
 
-    function downloadData() {
-        let csv = "Tahun,P_Rerata_Wilayah_mm\n";
-        document.querySelectorAll("#body-rain tr").forEach(tr => {
-            csv += tr.cells[0].innerText + "," + tr.cells[1].innerText + "\n";
-        });
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
+    function downloadCSV() {
+        let c = "Tahun,Hujan_Wilayah_mm\n";
+        document.querySelectorAll("#body-rain tr").forEach(r => c += r.cells[0].innerText + "," + r.cells[1].innerText + "\n");
+        const b = new Blob([c], { type: 'text/csv' });
+        const u = URL.createObjectURL(b);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = 'Rekap_Hujan_Wilayah_JS.csv';
-        a.click();
+        a.href = u; a.download = 'Hujan_Wilayah.csv'; a.click();
     }
 </script>
 </body>
