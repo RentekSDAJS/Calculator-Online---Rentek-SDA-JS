@@ -2,39 +2,49 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA Jaksel - Spatial Analyzer (Full Stations)</title>
+    <title>SDA Jaksel - Spatial Analyzer (With Labels)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body { margin: 0; padding: 0; display: flex; height: 100vh; font-family: 'Segoe UI', sans-serif; background: #0f172a; }
-        #sidebar { width: 380px; background: #1e293b; color: white; padding: 20px; z-index: 1000; overflow-y: auto; border-right: 4px solid #f59e0b; }
+        #sidebar { width: 380px; background: #1e293b; color: white; padding: 25px; z-index: 1000; overflow-y: auto; border-right: 4px solid #f59e0b; }
         #map { flex: 1; }
-        .card { background: #0f172a; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #334155; }
-        .btn { background: #f59e0b; color: #000; padding: 12px; border-radius: 6px; cursor: pointer; display: block; text-align: center; font-weight: bold; }
-        #result { background: #0369a1; padding: 20px; border-radius: 10px; display: none; margin-top: 15px; border-left: 6px solid #f59e0b; }
-        .st-item { background: #334155; padding: 10px; border-radius: 6px; margin-bottom: 6px; font-size: 0.8rem; border-left: 3px solid #f59e0b; }
-        h2 { color: #f59e0b; margin: 0 0 10px 0; font-size: 1.4rem; }
+        .card { background: #0f172a; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #334155; }
+        .btn-upload { background: #f59e0b; color: #1e293b; padding: 12px; border-radius: 8px; cursor: pointer; display: block; text-align: center; font-weight: bold; }
+        #result-box { background: #075985; padding: 20px; border-radius: 12px; margin-top: 20px; display: none; border-left: 6px solid #f59e0b; }
+        .st-item { background: #334155; padding: 12px; border-radius: 8px; margin-bottom: 8px; font-size: 0.85rem; border-left: 4px solid #f59e0b; }
+        h2 { color: #f59e0b; margin: 0 0 5px 0; font-size: 1.5rem; }
+        /* Style untuk Label Nama Stasiun */
+        .label-stasiun {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #f59e0b;
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
     <h2>SDA JAKSEL</h2>
-    <p style="font-size: 0.8rem; opacity: 0.7;">Analisis Spasial 22 Stasiun Hujan</p>
+    <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 20px;">Analisis Spasial & Labeling Stasiun</p>
     
     <div class="card">
-        <label style="font-size: 0.85rem; font-weight: bold;">Upload File GeoJSON:</label><br><br>
+        <label style="font-weight: bold; font-size: 0.9rem;">Input Catchment Area:</label><br><br>
         <input type="file" id="fileInput" accept=".json,.geojson" style="display:none">
-        <a class="btn" onclick="document.getElementById('fileInput').click()">AMBIL FILE WATERSHED</a>
-        <div id="status" style="font-size: 0.7rem; margin-top:10px; color:#94a3b8">Status: Menunggu file...</div>
+        <label for="fileInput" class="btn-upload">UPLOAD WATERSHED.JSON</label>
+        <span id="status" style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px; display: block;">Status: Siap.</span>
     </div>
 
-    <div id="result">
-        <span style="font-size: 0.7rem; font-weight: bold; letter-spacing: 1px;">RERATA CURAH HUJAN:</span>
-        <div id="valHujan" style="font-size: 2.2rem; font-weight: bold;">0 mm</div>
+    <div id="result-box">
+        <span style="font-size: 0.7rem; font-weight: bold; color: #38bdf8;">RERATA HUJAN WILAYAH:</span>
+        <div id="rain-val" style="font-size: 2.2rem; font-weight: 800; color: #fff;">0 mm</div>
     </div>
 
-    <h3 style="font-size: 1rem; margin-top: 20px;">Detail Kontribusi Stasiun:</h3>
-    <div id="listStasiun"></div>
+    <h3 style="font-size: 1rem; margin-top: 25px; border-bottom: 1px solid #475569; padding-bottom: 8px;">Kontribusi Stasiun Terhitung:</h3>
+    <div id="station-list"></div>
 </div>
 
 <div id="map"></div>
@@ -44,103 +54,109 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
 <script>
-    // DATA 22 STASIUN LENGKAP
-    const STASIUN_DB = [
+    const STASIUN_LENGKAP = [
         { n: "Katulampa", lat: -6.63317, lng: 106.837077, h: 10 },
         { n: "Depok", lat: -6.40065, lng: 106.831897, h: 15 },
         { n: "Manggarai", lat: -6.20742, lng: 106.848569, h: 5 },
-        { n: "Karet", lat: -6.1981, lng: 106.810097, h: 0 },
-        { n: "Setiabudi Timur", lat: -6.20462, lng: 106.829385, h: 20 },
-        { n: "Melati", lat: -6.20084, lng: 106.817982, h: 12 },
-        { n: "Istana", lat: -6.17165, lng: 106.8270424, h: 8 },
+        { n: "Karet", lat: -6.1981, lng: 106.810097, h: 12 },
+        { n: "Setiabudi Timur", lat: -6.20462, lng: 106.829385, h: 8 },
+        { n: "Melati", lat: -6.20084, lng: 106.817982, h: 10 },
+        { n: "Istana", lat: -6.17165, lng: 106.8270424, h: 7 },
         { n: "Krukut Hulu", lat: -6.34434, lng: 106.799081, h: 30 },
-        { n: "Sunter Hulu", lat: -6.31785, lng: 106.9211, h: 25 },
+        { n: "Sunter Hulu", lat: -6.31785, lng: 106.9211, h: 22 },
         { n: "Pesanggrahan", lat: -6.39708, lng: 106.77181, h: 40 },
         { n: "Angke Hulu", lat: -6.21835, lng: 106.694467, h: 15 },
         { n: "Tanjungan", lat: -6.10669, lng: 106.725882, h: 5 },
-        { n: "Tomang Barat", lat: -6.1671, lng: 106.78001, h: 10 },
-        { n: "Teluk Gong", lat: -6.1335, lng: 106.777649, h: 12 },
-        { n: "Pulo Gadung", lat: -6.19097, lng: 106.904213, h: 18 },
-        { n: "Sunter Kodamar", lat: -6.15508, lng: 106.886893, h: 20 },
+        { n: "Tomang Barat", lat: -6.1671, lng: 106.78001, h: 12 },
+        { n: "Teluk Gong", lat: -6.1335, lng: 106.777649, h: 8 },
+        { n: "Pulo Gadung", lat: -6.19097, lng: 106.904213, h: 15 },
+        { n: "Sunter Kodamar", lat: -6.15508, lng: 106.886893, h: 10 },
         { n: "Rawa Badak", lat: -6.12107, lng: 106.896744, h: 5 },
-        { n: "Pompa Cideng", lat: -6.17355, lng: 106.806328, h: 7 },
-        { n: "St. Meteorologi Kemayoran", lat: -6.15559, lng: 106.84, h: 15 },
-        { n: "Halim Perdana Kusuma", lat: -6.27036, lng: 106.88926, h: 22 },
-        { n: "St. Klimatologi Bogor", lat: -6.5, lng: 106.75, h: 35 },
-        { n: "St. Klimatologi Banten", lat: -6.26151, lng: 106.75084, h: 28 }
+        { n: "Pompa Cideng", lat: -6.17355, lng: 106.806328, h: 9 },
+        { n: "Kemayoran", lat: -6.15559, lng: 106.84, h: 14 },
+        { n: "Halim PK", lat: -6.27036, lng: 106.88926, h: 20 },
+        { n: "Bogor (Klimat)", lat: -6.5, lng: 106.75, h: 35 },
+        { n: "Banten (Klimat)", lat: -6.26151, lng: 106.75084, h: 25 }
     ];
 
     const utmProj = "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs";
     const wgsProj = "+proj=longlat +datum=WGS84 +no_defs";
 
-    const map = L.map('map').setView([-6.28, 106.81], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    const layerAnalisis = L.layerGroup().addTo(map);
+    const map = L.map('map', { zoomControl: false }).setView([-6.28, 106.81], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.5 }).addTo(map);
 
-    const pts = STASIUN_DB.map(s => {
-        L.circleMarker([s.lat, s.lng], {radius: 5, color: 'red', fillOpacity: 1, weight: 1})
-         .addTo(map).bindPopup(s.n);
+    const analysisLayer = L.layerGroup().addTo(map);
+
+    // Render 22 Stasiun dengan LABEL PERMANEN
+    const stationPoints = STASIUN_LENGKAP.map(s => {
+        const marker = L.circleMarker([s.lat, s.lng], {
+            radius: 5, color: '#fff', weight: 1, fillColor: '#ef4444', fillOpacity: 1
+        }).addTo(map);
+        
+        // Tambahkan Label Nama Stasiun
+        marker.bindTooltip(s.n, {
+            permanent: true, 
+            direction: 'top', 
+            className: 'label-stasiun',
+            offset: [0, -5]
+        });
+
         return turf.point([s.lng, s.lat], s);
     });
 
     document.getElementById('fileInput').onchange = function(e) {
         const file = e.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = function(ev) {
             try {
-                processWatershed(JSON.parse(ev.target.result));
-                document.getElementById('status').innerText = "✅ File berhasil dianalisis.";
+                calculateThiessen(JSON.parse(ev.target.result));
+                document.getElementById('status').innerText = "✅ Berhasil Memproses File.";
             } catch(err) {
-                document.getElementById('status').innerText = "❌ Error: " + err.message;
+                alert("Gagal membaca file watershed!");
             }
         };
         reader.readAsText(file);
     };
 
-    function processWatershed(raw) {
-        layerAnalisis.clearLayers();
-        
-        // Handling GeometryCollection & UTM
-        let geom = raw.geometries ? raw.geometries[0] : (raw.features ? raw.features[0].geometry : raw);
-        let coordsDec = geom.coordinates.map(ring => 
+    function calculateThiessen(json) {
+        analysisLayer.clearLayers();
+        let geom = json.geometries ? json.geometries[0] : (json.features ? json.features[0].geometry : json);
+        let convertedCoords = geom.coordinates.map(ring => 
             ring.map(c => {
                 let p = proj4(utmProj, wgsProj, [c[0], c[1]]);
                 return [p[0], p[1]];
             })
         );
-        
-        const poly = turf.polygon(coordsDec);
-        L.geoJSON(poly, {style: {color: '#38bdf8', weight: 4, fillOpacity: 0.1}}).addTo(layerAnalisis);
-        map.fitBounds(L.geoJSON(poly).getBounds());
+        const mainPoly = turf.polygon(convertedCoords);
+        L.geoJSON(mainPoly, { style: { color: '#0ea5e9', weight: 3, fillOpacity: 0.1 } }).addTo(analysisLayer);
+        map.fitBounds(L.geoJSON(mainPoly).getBounds(), { padding: [50, 50] });
 
-        // Analisis Thiessen
-        const bbox = turf.bbox(poly);
-        const voronoi = turf.voronoi(turf.featureCollection(pts), {
-            bbox: [bbox[0]-0.2, bbox[1]-0.2, bbox[2]+0.2, bbox[3]+0.2]
+        const bbox = turf.bbox(mainPoly);
+        const voronoi = turf.voronoi(turf.featureCollection(stationPoints), {
+            bbox: [bbox[0]-0.5, bbox[1]-0.5, bbox[2]+0.5, bbox[3]+0.5]
         });
 
-        let totalWxA = 0, totalA = 0;
-        const listUI = document.getElementById('listStasiun');
-        listUI.innerHTML = "";
+        let weightedSum = 0, totalArea = 0;
+        const listContainer = document.getElementById('station-list');
+        listContainer.innerHTML = "";
 
         voronoi.features.forEach((v, i) => {
-            const clip = turf.intersect(v, poly);
-            if (clip) {
-                const area = turf.area(clip) / 10000;
-                const st = STASIUN_DB[i];
-                totalWxA += (st.h * area);
-                totalA += area;
+            const intersection = turf.intersect(v, mainPoly);
+            if (intersection) {
+                const areaHa = turf.area(intersection) / 10000;
+                const station = STASIUN_LENGKAP[i];
+                weightedSum += (station.h * areaHa);
+                totalArea += areaHa;
 
-                L.geoJSON(clip, {style: {color: 'orange', weight: 1.5, fillOpacity: 0.4}}).addTo(layerAnalisis);
-                listUI.innerHTML += `<div class="st-item"><b>${st.n}</b><br>H: ${st.h} mm | L: ${area.toFixed(2)} Ha</div>`;
+                L.geoJSON(intersection, { style: { color: '#f59e0b', weight: 1.5, fillOpacity: 0.4 } }).addTo(analysisLayer);
+                listContainer.innerHTML += `<div class="st-item"><b>${station.n}</b><br>Hujan: ${station.h} mm | Luas: ${areaHa.toFixed(2)} Ha</div>`;
             }
         });
 
-        if (totalA > 0) {
-            document.getElementById('result').style.display = 'block';
-            document.getElementById('valHujan').innerText = (totalWxA / totalA).toFixed(2) + " mm";
+        if (totalArea > 0) {
+            document.getElementById('result-box').style.display = 'block';
+            document.getElementById('rain-val').innerText = (weightedSum / totalArea).toFixed(2) + " mm";
         }
     }
 </script>
