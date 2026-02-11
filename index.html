@@ -13,7 +13,7 @@
             --accent: #f59e0b;  /* Gold */
             --glow: rgba(245, 158, 11, 0.4);
             --card-bg: rgba(255, 255, 255, 0.95);
-            --admin-color: #10b981; /* Green untuk Admin */
+            --admin-success: #10b981; /* Emerald Green untuk Database */
         }
 
         body {
@@ -28,7 +28,6 @@
             flex-direction: column;
         }
 
-        /* WRAPPER DASHBOARD */
         #dashboard-content {
             display: flex;
             flex-direction: column;
@@ -91,6 +90,11 @@
             border-color: var(--accent);
         }
 
+        /* Styling khusus kartu Admin Database */
+        .card-admin:hover {
+            border-color: var(--admin-success);
+        }
+
         .icon-circle {
             width: 70px; height: 70px;
             background: var(--primary);
@@ -101,11 +105,10 @@
             border: 2px solid var(--accent);
         }
 
-        /* Card Khusus Admin */
         .card-admin .icon-circle {
-            background: var(--admin-color);
+            background: var(--admin-success);
             border-color: #fff;
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
         }
 
         .btn-launch {
@@ -126,7 +129,7 @@
         }
 
         .card-admin:hover .btn-launch {
-            background: var(--admin-color);
+            background: var(--admin-success);
             color: white;
         }
 
@@ -195,7 +198,7 @@
         <div class="calc-card" onclick="bukaHalaman('pipe-energy.html')">
             <div class="icon-circle">⚙️</div>
             <h2>Pipe Energy Calculator</h2>
-            <p>Analisis distribusi tekanan, head loss, dan verifikasi spesifikasi material pipa.</p>
+            <p>Analisis distribusi tekanan, head loss, dan verifikasi spesifikasi pipa.</p>
             <div class="btn-launch">Buka Calculator <span>→</span></div>
         </div>
 
@@ -208,10 +211,10 @@
         </div>
 
         <div class="calc-card card-admin" onclick="window.location.href='/admin/'">
-            <div class="icon-circle">🔐</div>
-            <h2>Database Management</h2>
-            <p>Update data hujan harian 22 Stasiun untuk periode 2000-2024.</p>
-            <div class="btn-launch">Login Admin <span>→</span></div>
+            <div class="icon-circle">📊</div>
+            <h2>Rainfall Database Admin</h2>
+            <p>Input dan Manajemen Data Hujan Harian 22 Stasiun (Periode 2000-2024).</p>
+            <div class="btn-launch">Buka Database <span>→</span></div>
         </div>
     </div>
 
@@ -229,7 +232,6 @@
 </div>
 
 <script>
-    // LOGIKA PORTAL
     function bukaHalaman(url) {
         document.getElementById('app-portal').style.display = 'block';
         document.getElementById('dashboard-content').style.display = 'none';
@@ -247,7 +249,6 @@
         window.netlifyIdentity.on("init", user => {
             if (!user) {
                 window.netlifyIdentity.on("login", () => {
-                    // Setelah login di halaman utama, langsung arahkan ke admin
                     document.location.href = "/admin/";
                 });
             }
