@@ -2,97 +2,90 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA Jaksel - Hydro Pro v2.0</title>
+    <title>SDA Jaksel - Hydro Analyst (Clean Version)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --navy: #0f172a; --accent: #f59e0b; --teal: #0d9488; --slate: #64748b; --danger: #ef4444; --success: #22c55e; }
-        body { margin: 0; display: flex; height: 100vh; font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; overflow: hidden; }
+        :root { --primary: #1e293b; --accent: #f59e0b; --success: #22c55e; --danger: #ef4444; }
+        body { margin: 0; display: flex; height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f1f5f9; }
         
-        #sidebar { width: 620px; background: white; padding: 20px; overflow-y: auto; border-right: 1px solid #cbd5e1; z-index: 1000; box-shadow: 5px 0 15px rgba(0,0,0,0.05); }
+        #sidebar { width: 600px; background: white; padding: 25px; overflow-y: auto; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 10; }
         #map { flex: 1; z-index: 1; }
 
-        .card { background: #ffffff; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
-        h2 { font-size: 1rem; text-transform: uppercase; border-left: 5px solid var(--accent); padding-left: 10px; margin-bottom: 15px; }
-        h3 { font-size: 0.75rem; color: var(--teal); text-transform: uppercase; margin: 0 0 10px 0; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
+        h2 { color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 10px; text-transform: uppercase; font-size: 1.2rem; }
+        .section-title { background: #f8fafc; padding: 8px 12px; border-radius: 6px; color: #475569; font-weight: bold; margin-top: 20px; font-size: 0.9rem; border-left: 4px solid var(--primary); }
         
-        .res-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; margin-top: 5px; }
-        .res-table th { background: #f8fafc; padding: 8px; border: 1px solid #e2e8f0; text-align: center; color: var(--slate); }
-        .res-table td { padding: 8px; border: 1px solid #e2e8f0; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.8rem; background: white; }
+        th { background: #f1f5f9; color: #334155; padding: 10px; border: 1px solid #e2e8f0; }
+        td { padding: 8px; border: 1px solid #e2e8f0; text-align: center; }
         
-        .best-row { background: #f0fdf4 !important; font-weight: bold; border: 2px solid var(--success) !important; }
-        .tag { padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.65rem; display: inline-block; }
+        .result-card { background: #f0fdf4; border: 2px solid var(--success); padding: 20px; border-radius: 12px; text-align: center; margin-top: 15px; }
+        .result-val { font-size: 2rem; font-weight: bold; color: #15803d; margin: 5px 0; }
+        
+        .tag { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.7rem; }
         .tag-ok { background: #dcfce7; color: #166534; }
         .tag-fail { background: #fee2e2; color: #991b1b; }
-
-        .btn { background: var(--navy); color: white; padding: 14px; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
-        .scroll-v { max-height: 180px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
-        .total-box { background: #f1f5f9; padding: 10px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; margin-top: 10px; display: flex; justify-content: space-between; }
+        
+        .btn { background: var(--primary); color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; font-size: 1rem; }
+        .btn:hover { background: #334155; }
+        
+        .scroll-area { max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; margin-top: 10px; border-radius: 6px; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <h2>Analisis Hidrologi Terpadu</h2>
+    <h2>Analisis Hidrologi JS</h2>
     
-    <div class="card">
-        <h3>Input & Konfigurasi</h3>
-        <input type="file" id="inputCatchment" style="width:100%; margin-bottom:10px;">
-        <select id="selectT" onchange="updateView()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
-            <option value="2">2 Tahun</option><option value="5">5 Tahun</option>
-            <option value="10">10 Tahun</option><option value="25">25 Tahun</option>
-            <option value="50">50 Tahun</option><option value="100">100 Tahun</option>
-        </select>
-        <button class="btn" onclick="handleCalculate()">MULAI ANALISIS DATA</button>
-    </div>
+    <div class="section-title">Konfigurasi Data</div>
+    <input type="file" id="inputCatchment" style="margin: 15px 0; display: block;">
+    <select id="selectT" onchange="updateView()" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+        <option value="2">Kala Ulang 2 Tahun</option>
+        <option value="5">Kala Ulang 5 Tahun</option>
+        <option value="10">Kala Ulang 10 Tahun</option>
+        <option value="25">Kala Ulang 25 Tahun</option>
+        <option value="50">Kala Ulang 50 Tahun</option>
+        <option value="100">Kala Ulang 100 Tahun</option>
+    </select>
+    <button class="btn" onclick="handleCalculate()">Hitung Hujan Rencana</button>
 
     <div id="resultsArea" style="display:none;">
-        <div class="card" style="text-align:center; background: #f0fdf4; border: 2px solid var(--success);">
-            <h3 style="margin:0; border:none;">METODE TERPILIH (T=<span class="valT"></span> TH)</h3>
-            <div id="bestName" style="font-size: 1.5rem; font-weight: 800; color: #15803d;">-</div>
-            <div id="bestVal" style="font-size: 1.2rem; font-weight: bold;">0.00 mm</div>
+        <div class="result-card">
+            <div style="font-weight: bold; color: #166534;">METODE TERPILIH (T=<span class="valT"></span>)</div>
+            <div id="bestName" style="font-size: 1.2rem; color: #1e293b; margin-top:5px;">-</div>
+            <div id="bestVal" class="result-val">0.00 mm</div>
         </div>
 
-        <div class="card">
-            <h3>📊 Uji Keselarasan (Goodness of Fit)</h3>
-            <table class="res-table">
-                <thead>
-                    <tr>
-                        <th>Metode</th>
-                        <th>$\Delta_{max}$ (SK)</th>
-                        <th>Uji SK</th>
-                        <th>$X^2$ (Chi)</th>
-                        <th>Uji Chi</th>
-                    </tr>
-                </thead>
-                <tbody id="body-compare"></tbody>
-            </table>
-        </div>
+        <div class="section-title">Uji Validitas Statistik</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metode</th>
+                    <th>SK ($\Delta_{max}$)</th>
+                    <th>Status SK</th>
+                    <th>Chi ($X^2$)</th>
+                    <th>Status Chi</th>
+                </tr>
+            </thead>
+            <tbody id="body-compare"></tbody>
+        </table>
 
-        <div class="card">
-            <h3>📐 Matriks Luas Pengaruh (Thiessen)</h3>
-            <table class="res-table">
-                <thead><tr><th>Stasiun</th><th>Luas (km²)</th><th>Koef (Ci)</th></tr></thead>
+        <div class="section-title">Parameter Statistik (N=<span id="countData">0</span>)</div>
+        <table>
+            <thead>
+                <tr><th>Parameter</th><th>Data Aritmatik</th><th>Data Log 10</th></tr>
+            </thead>
+            <tbody id="body-stats"></tbody>
+        </table>
+
+        <div class="section-title">Koefisien Thiessen</div>
+        <div class="scroll-area">
+            <table>
+                <thead><tr><th>Nama Stasiun</th><th>Luas (km²)</th><th>Koef (Ci)</th></tr></thead>
                 <tbody id="body-thiessen"></tbody>
             </table>
-            <div class="total-box"><span>Total Luas:</span><span id="totalAreaText">0.00 km²</span></div>
         </div>
-
-        <div class="card">
-            <h3>📏 Parameter Statistik</h3>
-            <table class="res-table">
-                <thead><tr><th>Parameter</th><th>Aritmatik</th><th>Log 10</th></tr></thead>
-                <tbody id="body-stats"></tbody>
-            </table>
-        </div>
-
-        <div class="card">
-            <h3>🌧️ Deret Hujan Rerata Wilayah</h3>
-            <div class="scroll-v">
-                <table class="res-table">
-                    <thead><tr><th>Tahun</th><th>Hujan (mm)</th></tr></thead>
-                    <tbody id="body-series"></tbody>
-                </table>
-            </div>
+        <div style="text-align: right; font-weight: bold; padding: 10px; font-size: 0.8rem;">
+            Total Luas: <span id="totalAreaText">0.00</span> km²
         </div>
     </div>
 </div>
@@ -128,6 +121,7 @@
     async function handleCalculate() {
         if (!geoData) return alert("Pilih file watershed dulu!");
         
+        // --- SPASIAL ---
         let geom = JSON.parse(JSON.stringify(geoData));
         if (geom.type === "Polygon") geom.coordinates = geom.coordinates.map(r => r.map(convertUTM));
         const poly = turf.feature(geom);
@@ -147,26 +141,26 @@
             }
         });
         thiessenResult.forEach(f => f.ci = f.area/totalA);
-        document.getElementById('totalAreaText').innerText = totalA.toFixed(2) + " km²";
+        document.getElementById('totalAreaText').innerText = totalA.toFixed(2);
 
+        // --- DATA & STATS ---
         const res = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`);
         const rawData = JSON.parse(atob((await res.json()).content));
-        rawData.sort((a,b) => a.tahun - b.tahun);
-
+        
         rainSeries = rawData.map(row => {
             let p = 0; thiessenResult.forEach(st => p += (parseFloat(row[st.id]) || 0) * st.ci);
-            return { tahun: row.tahun, nilai: p };
+            return p;
         });
 
-        const v = rainSeries.map(d => d.nilai);
-        const n = v.length;
+        const n = rainSeries.length;
+        document.getElementById('countData').innerText = n;
         const getS = (d) => {
             const m = d.reduce((a,b)=>a+b)/n;
             const s = Math.sqrt(d.map(x=>Math.pow(x-m,2)).reduce((a,b)=>a+b)/(n-1));
             const sk = (n/((n-1)*(n-2))) * d.map(x=>Math.pow((x-m)/s,3)).reduce((a,b)=>a+b);
             return {m, s, sk, cv: s/m};
         };
-        statsData = { lin: getS(v), log: getS(v.map(x => Math.log10(x))) };
+        statsData = { lin: getS(rainSeries), log: getS(rainSeries.map(x => Math.log10(x))) };
 
         const Z = { 2: 0, 5: 0.842, 10: 1.282, 25: 1.751, 50: 2.054, 100: 2.326 };
         globalMethods = [
@@ -186,34 +180,32 @@
     function renderAll() {
         document.getElementById('body-thiessen').innerHTML = thiessenResult.map(f => `<tr><td>${f.n}</td><td>${f.area.toFixed(2)}</td><td>${f.ci.toFixed(3)}</td></tr>`).join('');
         document.getElementById('body-stats').innerHTML = `
-            <tr><td>Mean</td><td>${statsData.lin.m.toFixed(2)}</td><td>${statsData.log.m.toFixed(4)}</td></tr>
-            <tr><td>Std Dev</td><td>${statsData.lin.s.toFixed(2)}</td><td>${statsData.log.s.toFixed(4)}</td></tr>
+            <tr><td>Rerata (Mean)</td><td>${statsData.lin.m.toFixed(2)}</td><td>${statsData.log.m.toFixed(4)}</td></tr>
+            <tr><td>Std Deviasi</td><td>${statsData.lin.s.toFixed(2)}</td><td>${statsData.log.s.toFixed(4)}</td></tr>
             <tr><td>Skewness</td><td>${statsData.lin.sk.toFixed(2)}</td><td>${statsData.log.sk.toFixed(4)}</td></tr>
-            <tr><td>Coeff Var</td><td>${statsData.lin.cv.toFixed(2)}</td><td>${statsData.log.cv.toFixed(4)}</td></tr>`;
-        document.getElementById('body-series').innerHTML = rainSeries.map(d => `<tr><td>${d.tahun}</td><td>${d.nilai.toFixed(2)}</td></tr>`).join('');
+            <tr><td>Coeff Var (Cv)</td><td>${statsData.lin.cv.toFixed(2)}</td><td>${statsData.log.cv.toFixed(4)}</td></tr>`;
         updateView();
     }
 
     function updateView() {
         const T = document.getElementById('selectT').value;
-        const n = rainSeries.length;
-        // Batas Kritis Estimasi (n=20, alpha=5%)
-        const critSK = 0.294; 
-        const critChi = 5.99;
+        const critSK = 0.294; // Batas Kritis SK 5%
+        const critChi = 5.99; // Batas Kritis Chi 5%
 
-        document.querySelectorAll('.valT').forEach(el => el.innerText = T);
+        document.querySelectorAll('.valT').forEach(el => el.innerText = T + " Tahun");
         document.getElementById('bestName').innerText = globalMethods[0].name;
         document.getElementById('bestVal').innerText = globalMethods[0].rec(T).toFixed(2) + " mm";
         
         document.getElementById('body-compare').innerHTML = globalMethods.map((m,i) => {
-            const skStatus = m.sk < critSK ? '<span class="tag tag-ok">DITERIMA</span>' : '<span class="tag tag-fail">DITOLAK</span>';
-            const chiStatus = m.chi < critChi ? '<span class="tag tag-ok">DITERIMA</span>' : '<span class="tag tag-fail">DITOLAK</span>';
-            
+            const skOk = m.sk < critSK;
+            const chiOk = m.chi < critChi;
             return `
             <tr class="${i===0?'best-row':''}">
                 <td>${m.name}</td>
-                <td>${m.sk.toFixed(4)}</td><td>${skStatus}</td>
-                <td>${m.chi.toFixed(2)}</td><td>${chiStatus}</td>
+                <td>${m.sk.toFixed(4)}</td>
+                <td><span class="tag ${skOk?'tag-ok':'tag-fail'}">${skOk?'DITERIMA':'DITOLAK'}</span></td>
+                <td>${m.chi.toFixed(2)}</td>
+                <td><span class="tag ${chiOk?'tag-ok':'tag-fail'}">${chiOk?'DITERIMA':'DITOLAK'}</span></td>
             </tr>`;
         }).join('');
     }
