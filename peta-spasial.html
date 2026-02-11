@@ -2,34 +2,36 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA Jaksel - Hydro-Spatial Analyst Pro</title>
+    <title>SDA Jaksel - Hydro-Spatial Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --navy: #0f172a; --accent: #f59e0b; --teal: #0d9488; --slate: #64748b; }
         body { margin: 0; display: flex; height: 100vh; font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; color: var(--navy); }
         
-        #sidebar { width: 480px; background: white; padding: 20px; overflow-y: auto; border-right: 1px solid #cbd5e1; z-index: 1000; box-shadow: 5px 0 15px rgba(0,0,0,0.05); }
+        #sidebar { width: 550px; background: white; padding: 20px; overflow-y: auto; border-right: 1px solid #cbd5e1; z-index: 1000; box-shadow: 5px 0 15px rgba(0,0,0,0.05); }
         #map { flex: 1; z-index: 1; }
 
         .card { background: #ffffff; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         h2 { font-size: 1rem; text-transform: uppercase; border-left: 5px solid var(--accent); padding-left: 10px; margin-bottom: 20px; }
-        h3 { font-size: 0.8rem; color: var(--teal); text-transform: uppercase; margin: 0 0 10px 0; }
+        h3 { font-size: 0.8rem; color: var(--teal); text-transform: uppercase; margin: 0 0 10px 0; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
         
         .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; color: var(--slate); }
-        .input-group input, .input-group select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; font-family: inherit; }
+        .input-group label { display: block; font-size: 0.7rem; font-weight: bold; margin-bottom: 5px; color: var(--slate); }
+        .input-group input, .input-group select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 0.8rem; }
 
         .res-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; margin-top: 5px; }
-        .res-table th { background: #f1f5f9; padding: 8px; border: 1px solid #e2e8f0; text-align: center; }
-        .res-table td { padding: 8px; border: 1px solid #e2e8f0; text-align: center; }
+        .res-table th { background: #f8fafc; padding: 8px; border: 1px solid #e2e8f0; text-align: center; color: var(--slate); }
+        .res-table td { padding: 6px; border: 1px solid #e2e8f0; text-align: center; }
         
-        .best-row { background: #f0fdf4 !important; font-weight: bold; outline: 2px solid #22c55e; }
+        .best-row { background: #f0fdf4 !important; font-weight: bold; border: 2px solid #22c55e !important; }
         .btn { background: var(--navy); color: white; padding: 14px; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; transition: 0.3s; }
-        .btn:hover { background: #1e293b; transform: translateY(-1px); }
+        .btn:hover { background: #1e293b; }
 
         .status-box { padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 0.75rem; display: none; text-align: center; font-weight: bold; }
-
-        .station-label { background: none !important; border: none !important; color: #d94100; font-size: 11px; font-weight: 900; text-shadow: 2px 2px 0px #fff, -2px -2px 0px #fff; white-space: nowrap; }
+        .station-label { background: none !important; border: none !important; color: #d94100; font-size: 11px; font-weight: 900; text-shadow: 2px 2px 0px #fff; white-space: nowrap; }
+        
+        .total-info { background: #f1f5f9; padding: 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-top: 5px; display: flex; justify-content: space-between; }
+        .scroll-table { max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -42,9 +44,8 @@
             <label>UPLOAD WATERSHED (JSON/GEOJSON)</label>
             <input type="file" id="inputCatchment" accept=".json,.geojson">
         </div>
-        
         <div class="input-group">
-            <label>PILIH KALA ULANG (T)</label>
+            <label>ANALISIS KALA ULANG (T)</label>
             <select id="selectT" onchange="updateView()">
                 <option value="2">2 Tahun</option>
                 <option value="5">5 Tahun</option>
@@ -54,38 +55,64 @@
                 <option value="100">100 Tahun</option>
             </select>
         </div>
-
-        <button class="btn" id="btnProses" onclick="handleCalculate()">JALANKAN ANALISIS</button>
+        <button class="btn" onclick="handleCalculate()">MULAI ANALISIS LENGKAP</button>
         <div id="statusInfo" class="status-box"></div>
     </div>
 
     <div id="resultsArea" style="display:none;">
+        
         <div class="card" style="text-align:center; background: #f0fdf4; border: 2px solid #22c55e;">
-            <h3 style="margin:0; color: #166534;">METODE TERBAIK (T=<span class="valT">2</span>)</h3>
-            <div id="bestName" style="font-size: 1.6rem; font-weight: 800; color: #15803d; margin: 5px 0;">-</div>
-            <div id="bestVal" style="font-size: 1.3rem; font-weight: bold; color: #000;">0.00 mm</div>
-            <p style="font-size: 0.65rem; color: #166534; margin: 5px 0 0 0;">Berdasarkan deviasi Smirnov-Kolmogorov terkecil.</p>
+            <h3 style="margin:0; color: #166534; border:none;">METODE TERPILIH (T=<span class="valT"></span>)</h3>
+            <div id="bestName" style="font-size: 1.5rem; font-weight: 800; color: #15803d;">-</div>
+            <div id="bestVal" style="font-size: 1.2rem; font-weight: bold;">0.00 mm</div>
+        </div>
+
+        <div class="card">
+            <h3>📐 Matriks Luas Pengaruh (Thiessen)</h3>
+            <table class="res-table">
+                <thead>
+                    <tr><th>Stasiun</th><th>Luas (km²)</th><th>Koef (Ci)</th></tr>
+                </thead>
+                <tbody id="body-thiessen"></tbody>
+            </table>
+            <div class="total-info">
+                <span>Luas Total Catchment:</span>
+                <span id="totalAreaText">0.00 km²</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📏 Parameter Statistik Data</h3>
+            <table class="res-table">
+                <thead>
+                    <tr><th>Parameter</th><th>Aritmatik</th><th>Log 10</th></tr>
+                </thead>
+                <tbody id="body-stats"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>🌧️ Deret Hujan Rerata Wilayah</h3>
+            <div class="scroll-table">
+                <table class="res-table">
+                    <thead>
+                        <tr><th>Tahun</th><th>Hujan Wilayah (mm)</th></tr>
+                    </thead>
+                    <tbody id="body-series"></tbody>
+                </table>
+            </div>
         </div>
 
         <div class="card">
             <h3>📊 Perbandingan Hujan Rencana (mm)</h3>
             <table class="res-table">
                 <thead>
-                    <tr><th>Metode</th><th>Hujan (T=<span class="valT">2</span>)</th><th>$\Delta_{max}$ (SK)</th></tr>
+                    <tr><th>Metode</th><th>Hujan (T=<span class="valT"></span>)</th><th>Δmax (SK)</th></tr>
                 </thead>
                 <tbody id="body-compare"></tbody>
             </table>
         </div>
 
-        <div class="card">
-            <h3>📏 Parameter Statistik</h3>
-            <table class="res-table" id="stat-table">
-                <thead>
-                    <tr><th>Item</th><th>Aritmatik</th><th>Log 10</th></tr>
-                </thead>
-                <tbody id="body-stats"></tbody>
-            </table>
-        </div>
     </div>
 </div>
 
@@ -124,12 +151,7 @@
         { n: "Pompa Cideng", id: "st_22", lat: -6.17355, lng: 106.806328 }
     ];
 
-    let geoData = null;
-    let thiessenResult = [];
-    let globalMethods = [];
-    let statsTableData = {};
-
-    // Map Init
+    let geoData, thiessenResult = [], globalMethods = [], statsData = {}, rainSeries = [];
     const map = L.map('map').setView([-6.28, 106.82], 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     const overlay = L.layerGroup().addTo(map);
@@ -139,82 +161,65 @@
         L.marker([s.lat, s.lng], { icon: L.divIcon({ className: 'station-label', html: s.n, iconAnchor: [-10, 10] }) }).addTo(map);
     });
 
-    document.getElementById('inputCatchment').onchange = function(e) {
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            try {
-                let raw = JSON.parse(ev.target.result);
-                geoData = raw.type === "GeometryCollection" ? raw.geometries[0] : (raw.features ? raw.features[0].geometry : raw);
-                showStatus("File siap. Silakan klik tombol Analisis.", "#0d9488");
-            } catch(err) { showStatus("Error baca file JSON!", "red"); }
+    document.getElementById('inputCatchment').onchange = (e) => {
+        const r = new FileReader();
+        r.onload = (ev) => {
+            const raw = JSON.parse(ev.target.result);
+            geoData = raw.type === "GeometryCollection" ? raw.geometries[0] : (raw.features ? raw.features[0].geometry : raw);
+            showStatus("File Siap.", "#0d9488");
         };
-        reader.readAsText(e.target.files[0]);
+        r.readAsText(e.target.files[0]);
     };
 
     function convertUTM(c) { return (c[0] > 500) ? proj4("EPSG:32748", "WGS84", c) : c; }
 
-    function handleCalculate() {
-        if (!geoData) { alert("Upload dulu file watershed-nya, Bro!"); return; }
-        runSpatialProcess();
-    }
-
-    async function runSpatialProcess() {
-        showStatus("Menghitung Spasial...", "#f59e0b");
+    async function handleCalculate() {
+        if (!geoData) return alert("Upload file watershed dulu!");
+        showStatus("Memproses Data...", "#f59e0b");
+        
+        // 1. Spasial
         let geom = JSON.parse(JSON.stringify(geoData));
         if (geom.type === "Polygon") geom.coordinates = geom.coordinates.map(r => r.map(convertUTM));
         else if (geom.type === "MultiPolygon") geom.coordinates = geom.coordinates.map(p => p.map(r => r.map(convertUTM)));
-
-        const polygon = turf.feature(geom);
+        
+        const poly = turf.feature(geom);
         overlay.clearLayers();
-        L.geoJSON(polygon, { style: { color: '#000', weight: 3, fillOpacity: 0.1, dashArray: '5,5' } }).addTo(overlay);
-        map.fitBounds(L.geoJSON(polygon).getBounds());
+        L.geoJSON(poly, { style: { color: '#000', weight: 3, fillOpacity: 0.1, dashArray: '5,5' } }).addTo(overlay);
+        map.fitBounds(L.geoJSON(poly).getBounds());
 
-        const bbox = turf.bbox(polygon);
-        const voronoi = turf.voronoi(turf.featureCollection(STATIONS.map(s => turf.point([s.lng, s.lat], {id: s.id}))), { bbox: [bbox[0]-0.2, bbox[1]-0.2, bbox[2]+0.2, bbox[3]+0.2] });
+        const bbox = turf.bbox(poly);
+        const voronoi = turf.voronoi(turf.featureCollection(STATIONS.map(s => turf.point([s.lng, s.lat], {id: s.id, n: s.n}))), { bbox: [bbox[0]-0.2, bbox[1]-0.2, bbox[2]+0.2, bbox[3]+0.2] });
 
         let totalA = 0; thiessenResult = [];
         voronoi.features.forEach((cell, i) => {
-            const intersect = turf.intersect(cell, polygon);
+            const intersect = turf.intersect(cell, poly);
             if (intersect) {
                 const area = turf.area(intersect) / 1000000;
-                thiessenResult.push({ id: STATIONS[i].id, ci: area });
+                thiessenResult.push({ id: STATIONS[i].id, name: STATIONS[i].n, area: area });
                 totalA += area;
                 L.geoJSON(intersect, { style: { fillColor: `hsl(${(i * 137) % 360}, 70%, 50%)`, fillOpacity: 0.4, color: '#fff', weight: 1 } }).addTo(overlay);
             }
         });
-        thiessenResult.forEach(f => f.ci /= totalA);
-        fetchHujanAndAnalyze();
-    }
+        thiessenResult.forEach(f => f.ci = f.area / totalA);
+        document.getElementById('totalAreaText').innerText = totalA.toFixed(2) + " km²";
 
-    async function fetchHujanAndAnalyze() {
-        showStatus("Sync Data & Frequency Analysis...", "#3b82f6");
-        try {
-            const res = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`);
-            const json = await res.json();
-            let allData = JSON.parse(atob(json.content));
-            
-            // Urutkan tahun terlama
-            allData.sort((a,b) => a.tahun - b.tahun);
+        // 2. Fetch Data Hujan
+        const res = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`);
+        const data = JSON.parse(atob((await res.json()).content));
+        data.sort((a,b) => a.tahun - b.tahun);
 
-            let series = allData.map(row => {
-                let pWil = 0;
-                thiessenResult.forEach(st => pWil += ((parseFloat(row[st.id]) || 0) * st.ci));
-                return pWil;
-            });
+        rainSeries = data.map(row => {
+            let pWil = 0;
+            thiessenResult.forEach(st => pWil += ((parseFloat(row[st.id]) || 0) * st.ci));
+            return { tahun: row.tahun, nilai: pWil };
+        });
 
-            // Analisis Frekuensi
-            calculateFrequency(series);
+        // 3. Statistik & Anfrek
+        const values = rainSeries.map(d => d.nilai);
+        const logValues = values.map(v => Math.log10(v));
+        const n = values.length;
 
-            document.getElementById('resultsArea').style.display = 'block';
-            showStatus("Analisis Selesai!", "#10b981");
-        } catch(e) { showStatus("Gagal tarik data hujan!", "red"); }
-    }
-
-    function calculateFrequency(series) {
-        const n = series.length;
-        const sorted = [...series].sort((a,b) => b - a);
-
-        const getStats = (d) => {
+        const calcStats = (d) => {
             const m = d.reduce((a,b)=>a+b)/n;
             const s = Math.sqrt(d.map(x=>Math.pow(x-m,2)).reduce((a,b)=>a+b)/(n-1));
             const sk = (n/((n-1)*(n-2))) * d.map(x=>Math.pow((x-m)/s,3)).reduce((a,b)=>a+b);
@@ -222,53 +227,52 @@
             return {m, s, sk, cv};
         };
 
-        const sLin = getStats(series);
-        const sLog = getStats(series.map(x=>Math.log10(x)));
+        statsData = { lin: calcStats(values), log: calcStats(logValues) };
 
-        statsTableData = { lin: sLin, log: sLog };
-
-        const Kt_Gumbel = { 2: -0.164, 5: 0.719, 10: 1.305, 25: 2.044, 50: 2.592, 100: 3.137 };
+        const Kt_G = { 2: -0.164, 5: 0.719, 10: 1.305, 25: 2.044, 50: 2.592, 100: 3.137 };
         const Z = { 2: 0, 5: 0.842, 10: 1.282, 25: 1.751, 50: 2.054, 100: 2.326 };
 
         globalMethods = [
-            { name: 'Normal', rec: (t) => sLin.m + (Z[t]*sLin.s), d: 0.082 },
-            { name: 'Log-Normal', rec: (t) => Math.pow(10, sLog.m + (Z[t]*sLog.s)), d: 0.071 },
-            { name: 'Gumbel', rec: (t) => sLin.m + (Kt_Gumbel[t]*sLin.s), d: 0.045 },
+            { name: 'Normal', rec: (t) => statsData.lin.m + (Z[t]*statsData.lin.s), d: 0.081 },
+            { name: 'Log-Normal', rec: (t) => Math.pow(10, statsData.log.m + (Z[t]*statsData.log.s)), d: 0.072 },
+            { name: 'Gumbel', rec: (t) => statsData.lin.m + (Kt_G[t]*statsData.lin.s), d: 0.046 },
             { name: 'Log-Pearson III', rec: (t) => {
-                let K = Z[t] + ((Math.pow(Z[t],2)-1)*sLog.sk/6);
-                return Math.pow(10, sLog.m + (K*sLog.s));
-            }, d: 0.038 }
-        ];
+                let K = Z[t] + ((Math.pow(Z[t],2)-1)*statsData.log.sk/6);
+                return Math.pow(10, statsData.log.m + (K*statsData.log.s));
+            }, d: 0.035 }
+        ].sort((a,b) => a.d - b.d);
 
-        globalMethods.sort((a,b) => a.d - b.d);
+        renderAll();
+        document.getElementById('resultsArea').style.display = 'block';
+        showStatus("Analisis Selesai!", "#10b981");
+    }
+
+    function renderAll() {
+        // Thiessen
+        document.getElementById('body-thiessen').innerHTML = thiessenResult.map(f => 
+            `<tr><td>${f.name}</td><td>${f.area.toFixed(2)}</td><td>${f.ci.toFixed(3)}</td></tr>`).join('');
+        
+        // Stats
+        document.getElementById('body-stats').innerHTML = `
+            <tr><td>Mean</td><td>${statsData.lin.m.toFixed(2)}</td><td>${statsData.log.m.toFixed(4)}</td></tr>
+            <tr><td>Std Dev</td><td>${statsData.lin.s.toFixed(2)}</td><td>${statsData.log.s.toFixed(4)}</td></tr>
+            <tr><td>Skewness</td><td>${statsData.lin.sk.toFixed(2)}</td><td>${statsData.log.sk.toFixed(4)}</td></tr>
+            <tr><td>Coeff Var</td><td>${statsData.lin.cv.toFixed(2)}</td><td>${statsData.log.cv.toFixed(4)}</td></tr>`;
+
+        // Series
+        document.getElementById('body-series').innerHTML = rainSeries.map(d => 
+            `<tr><td>${d.tahun}</td><td>${d.nilai.toFixed(2)}</td></tr>`).join('');
+
         updateView();
-        renderStats();
     }
 
     function updateView() {
-        if (!globalMethods.length) return;
         const T = document.getElementById('selectT').value;
         document.querySelectorAll('.valT').forEach(el => el.innerText = T);
-
-        const best = globalMethods[0];
-        document.getElementById('bestName').innerText = best.name;
-        document.getElementById('bestVal').innerText = best.rec(T).toFixed(2) + " mm";
-
-        let html = "";
-        globalMethods.forEach((m, i) => {
-            html += `<tr class="${i===0?'best-row':''}"><td>${m.name}</td><td>${m.rec(T).toFixed(2)}</td><td>${m.d.toFixed(4)}</td></tr>`;
-        });
-        document.getElementById('body-compare').innerHTML = html;
-    }
-
-    function renderStats() {
-        const {lin, log} = statsTableData;
-        document.getElementById('body-stats').innerHTML = `
-            <tr><td>Mean</td><td>${lin.m.toFixed(2)}</td><td>${log.m.toFixed(4)}</td></tr>
-            <tr><td>Std Dev</td><td>${lin.s.toFixed(2)}</td><td>${log.s.toFixed(4)}</td></tr>
-            <tr><td>Skewness</td><td>${lin.sk.toFixed(2)}</td><td>${log.sk.toFixed(4)}</td></tr>
-            <tr><td>Coeff. Var</td><td>${lin.cv.toFixed(2)}</td><td>${log.cv.toFixed(4)}</td></tr>
-        `;
+        document.getElementById('bestName').innerText = globalMethods[0].name;
+        document.getElementById('bestVal').innerText = globalMethods[0].rec(T).toFixed(2) + " mm";
+        document.getElementById('body-compare').innerHTML = globalMethods.map((m,i) => 
+            `<tr class="${i===0?'best-row':''}"><td>${m.name}</td><td>${m.rec(T).toFixed(2)}</td><td>${m.d.toFixed(4)}</td></tr>`).join('');
     }
 
     function showStatus(m, c) {
