@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDA Jaksel - Engineering Control Center</title>
+    
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
     <style>
         :root {
             --primary: #0f172a; /* Navy Deep */
             --accent: #f59e0b;  /* Gold */
             --glow: rgba(245, 158, 11, 0.4);
             --card-bg: rgba(255, 255, 255, 0.95);
+            --admin-color: #10b981; /* Green untuk Admin */
         }
 
         body {
@@ -97,6 +101,13 @@
             border: 2px solid var(--accent);
         }
 
+        /* Card Khusus Admin */
+        .card-admin .icon-circle {
+            background: var(--admin-color);
+            border-color: #fff;
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.4);
+        }
+
         .btn-launch {
             background: var(--primary);
             color: white;
@@ -114,10 +125,14 @@
             color: var(--primary);
         }
 
-        /* --- CODING UNTUK PORTAL APLIKASI & TOMBOL BACK --- */
-        
+        .card-admin:hover .btn-launch {
+            background: var(--admin-color);
+            color: white;
+        }
+
+        /* --- PORTAL APLIKASI --- */
         #app-portal {
-            display: none; /* Sembunyi di awal */
+            display: none; 
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100vh;
@@ -149,12 +164,6 @@
             text-transform: uppercase;
             font-size: 0.8rem;
             transition: 0.3s;
-        }
-
-        .btn-back-floating:hover {
-            transform: scale(1.1);
-            background: var(--primary);
-            color: white;
         }
 
         footer {
@@ -191,11 +200,18 @@
         </div>
 
         <div class="calc-card" onclick="bukaHalaman('peta-spasial.html')">
-            <span class="status-badge badge-new" style="position: absolute; top: 20px; right: 20px; background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold;">New</span>
+            <span style="position: absolute; top: 20px; right: 20px; background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold;">New</span>
             <div class="icon-circle">🌍</div>
             <h2>Spatial Area Analyzer</h2>
             <p>Analisis Catchment Area dan deteksi stasiun hujan secara otomatis.</p>
             <div class="btn-launch">Buka WebGIS <span>→</span></div>
+        </div>
+
+        <div class="calc-card card-admin" onclick="window.location.href='/admin/'">
+            <div class="icon-circle">🔐</div>
+            <h2>Database Management</h2>
+            <p>Update data hujan harian 22 Stasiun untuk periode 2000-2024.</p>
+            <div class="btn-launch">Login Admin <span>→</span></div>
         </div>
     </div>
 
@@ -213,22 +229,29 @@
 </div>
 
 <script>
+    // LOGIKA PORTAL
     function bukaHalaman(url) {
-        // Munculkan portal aplikasi
         document.getElementById('app-portal').style.display = 'block';
-        // Sembunyikan dashboard agar tidak mengganggu scroll
         document.getElementById('dashboard-content').style.display = 'none';
-        // Masukkan link ke dalam iframe
         document.getElementById('app-frame').src = url;
     }
 
     function kembaliKeMenu() {
-        // Sembunyikan portal aplikasi
         document.getElementById('app-portal').style.display = 'none';
-        // Munculkan kembali dashboard
         document.getElementById('dashboard-content').style.display = 'flex';
-        // Kosongkan iframe agar simulasi berhenti (hemat RAM)
         document.getElementById('app-frame').src = '';
+    }
+
+    // LOGIKA NETLIFY IDENTITY
+    if (window.netlifyIdentity) {
+        window.netlifyIdentity.on("init", user => {
+            if (!user) {
+                window.netlifyIdentity.on("login", () => {
+                    // Setelah login di halaman utama, langsung arahkan ke admin
+                    document.location.href = "/admin/";
+                });
+            }
+        });
     }
 </script>
 
