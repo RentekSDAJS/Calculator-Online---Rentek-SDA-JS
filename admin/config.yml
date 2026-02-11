@@ -2,9 +2,6 @@ backend:
   name: git-gateway
   branch: main
 
-media_folder: "assets/uploads"
-public_folder: "/assets/uploads"
-
 collections:
   - name: "hujan"
     label: "Update Data Hujan"
@@ -15,7 +12,26 @@ collections:
     format: "json"
     fields:
       - { label: "Tahun", name: "year", widget: "string" }
-      - { label: "Pesanggrahan", name: "st_01", widget: "number", value_type: "float" }
-      - { label: "Angke", name: "st_02", widget: "number", value_type: "float" }
-      - { label: "Krukut", name: "st_03", widget: "number", value_type: "float" }
-      - { label: "Keterangan Tambahan", name: "body", widget: "text", required: false }
+      - { label: "01. Kemayoran", name: "st_01", widget: "number", value_type: "float" }
+      - { label: "02. Halim", name: "st_02", widget: "number", value_type: "float" }
+      - { label: "03. Bogor", name: "st_03", widget: "number", value_type: "float" }
+      - { label: "04. Banten", name: "st_04", widget: "number", value_type: "float" }
+      - { label: "05. Katulampa", name: "st_05", widget: "number", value_type: "float" }
+      - { label: "06. Depok", name: "st_06", widget: "number", value_type: "float" }
+      - { label: "07. Manggarai", name: "st_07", widget: "number", value_type: "float" }
+      - { label: "08. Karet", name: "st_08", widget: "number", value_type: "float" }
+      - { label: "09. Setiabudi Timur", name: "st_09", widget: "number", value_type: "float" }
+      - { label: "10. Melati", name: "st_10", widget: "number", value_type: "float" }
+      - { label: "11. Istana", name: "st_11", widget: "number", value_type: "float" }
+      - { label: "12. Krukut Hulu", name: "st_12", widget: "number", value_type: "float" }
+      - { label: "13. Sunter Hulu", name: "st_13", widget: "number", value_type: "float" }
+      - { label: "14. Pesanggrahan", name: "st_14", widget: "number", value_type: "float" }
+      - { label: "15. Angke Hulu", name: "st_15", widget: "number", value_type: "float" }
+      - { label: "16. Tanjungan", name: "st_16", widget: "number", value_type: "float" }
+      - { label: "17. Tomang Barat", name: "st_17", widget: "number", value_type: "float" }
+      - { label: "18. Teluk Gong", name: "st_18", widget: "number", value_type: "float" }
+      - { label: "19. Pulo Gadung", name: "st_19", widget: "number", value_type: "float" }
+      - { label: "20. Sunter Kodamar", name: "st_20", widget: "number", value_type: "float" }
+      - { label: "21. Sunter III Rawa Badak", name: "st_21", widget: "number", value_type: "float" }
+      - { label: "22. Pompa Cideng", name: "st_22", widget: "number", value_type: "float" }
+      - { label: "Keterangan", name: "body", widget: "text", required: false }
