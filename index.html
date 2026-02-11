@@ -4,201 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDA Jaksel - Engineering Control Center</title>
-    
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
     <style>
-        :root {
-            --primary: #0f172a; /* Navy Deep */
-            --accent: #f59e0b;  /* Gold */
-            --glow: rgba(245, 158, 11, 0.4);
-            --card-bg: rgba(255, 255, 255, 0.95);
-            --admin-success: #10b981; /* Emerald Green untuk Database */
-            --recap-blue: #3b82f6;    /* Biru untuk Rekap */
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            margin: 0;
-            background: #e2e8f0;
-            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-            background-size: 30px 30px;
-            color: var(--primary);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #dashboard-content {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-
-        #main-header {
-            background: var(--primary);
-            color: white;
-            padding: 60px 20px;
-            text-align: center;
-            position: relative;
-            border-bottom: 8px solid var(--accent);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        .header-title {
-            font-size: 2.8rem;
-            font-weight: 900;
-            margin: 0;
-            letter-spacing: -1px;
-            text-transform: uppercase;
-            text-shadow: 2px 2px 0px var(--accent);
-        }
-
-        .header-subtitle {
-            color: var(--accent);
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-top: 10px;
-            letter-spacing: 2px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: -40px auto 50px auto;
-            padding: 0 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 25px;
-            z-index: 10;
-        }
-
-        .calc-card {
-            background: var(--card-bg);
-            border-radius: 24px;
-            padding: 40px;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 1px solid rgba(255,255,255,0.3);
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            position: relative;
-            cursor: pointer;
-        }
-
-        .calc-card:hover {
-            transform: translateY(-15px) scale(1.02);
-            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.2);
-            border-color: var(--accent);
-        }
-
-        .card-admin:hover {
-            border-color: var(--admin-success);
-        }
-
-        .card-recap:hover {
-            border-color: var(--recap-blue);
-        }
-
-        .icon-circle {
-            width: 70px; height: 70px;
-            background: var(--primary);
-            border-radius: 18px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 2.2rem; margin-bottom: 25px;
-            box-shadow: 0 10px 20px var(--glow);
-            border: 2px solid var(--accent);
-        }
-
-        .card-admin .icon-circle {
-            background: var(--admin-success);
-            border-color: #fff;
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
-        }
-
-        .card-recap .icon-circle {
-            background: var(--primary);
-            border-color: var(--accent);
-            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2);
-        }
-
-        .btn-launch {
-            background: var(--primary);
-            color: white;
-            padding: 16px;
-            border-radius: 12px;
-            font-weight: 800;
-            text-align: center;
-            text-transform: uppercase;
-            margin-top: auto;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-        }
-
-        .calc-card:hover .btn-launch {
-            background: var(--accent);
-            color: var(--primary);
-        }
-
-        .card-admin:hover .btn-launch {
-            background: var(--admin-success);
-            color: white;
-        }
-
-        .card-recap:hover .btn-launch {
-            background: var(--primary);
-            color: var(--accent);
-        }
-
-        #app-portal {
-            display: none; 
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100vh;
-            background: white;
-            z-index: 9999;
-        }
-
-        #app-frame {
-            width: 100%; height: 100%;
-            border: none;
-        }
-
-        .btn-back-floating {
-            position: fixed;
-            bottom: 30px;
-            left: 30px;
-            z-index: 10000;
-            background: var(--accent);
-            color: var(--primary);
-            border: none;
-            padding: 15px 25px;
-            border-radius: 50px;
-            font-weight: 900;
-            cursor: pointer;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            transition: 0.3s;
-        }
-
-        footer {
-            margin-top: auto;
-            padding: 40px;
-            text-align: center;
-            color: #64748b;
-        }
+        :root { --primary: #0f172a; --accent: #f59e0b; --card-bg: rgba(255, 255, 255, 0.95); }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: #e2e8f0; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 30px 30px; color: var(--primary); min-height: 100vh; display: flex; flex-direction: column; }
+        #main-header { background: var(--primary); color: white; padding: 60px 20px; text-align: center; border-bottom: 8px solid var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .header-title { font-size: 2.8rem; font-weight: 900; text-transform: uppercase; text-shadow: 2px 2px 0px var(--accent); margin: 0; }
+        .header-subtitle { color: var(--accent); font-size: 1.2rem; font-weight: 600; margin-top: 10px; letter-spacing: 2px; }
+        .container { max-width: 1200px; margin: -40px auto 50px auto; padding: 0 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; z-index: 10; }
+        .calc-card { background: var(--card-bg); border-radius: 24px; padding: 40px; transition: 0.4s; border: 1px solid rgba(255,255,255,0.3); display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.1); cursor: pointer; position: relative; }
+        .calc-card:hover { transform: translateY(-15px); box-shadow: 0 30px 60px rgba(15, 23, 42, 0.2); border-color: var(--accent); }
+        .icon-circle { width: 70px; height: 70px; background: var(--primary); border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin-bottom: 25px; border: 2px solid var(--accent); color: var(--accent); }
+        .btn-launch { background: var(--primary); color: white; padding: 16px; border-radius: 12px; font-weight: 800; text-align: center; text-transform: uppercase; margin-top: auto; transition: 0.3s; }
+        .calc-card:hover .btn-launch { background: var(--accent); color: var(--primary); }
+        #app-portal { display: none; position: fixed; inset: 0; background: white; z-index: 9999; }
+        #app-frame { width: 100%; height: 100%; border: none; }
+        .btn-back { position: fixed; bottom: 30px; left: 30px; z-index: 10000; background: var(--accent); color: var(--primary); border: none; padding: 15px 25px; border-radius: 50px; font-weight: 900; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+        footer { margin-top: auto; padding: 40px; text-align: center; color: #64748b; }
     </style>
 </head>
 <body>
-
-<div id="dashboard-content">
     <header id="main-header">
-        <div class="header-content">
-            <div class="header-title">SDA CALCULATOR ONLINE</div>
-            <div class="header-subtitle">RENTEK SDA JS</div>
-        </div>
+        <div class="header-title">SDA CALCULATOR ONLINE</div>
+        <div class="header-subtitle">RENTEK SDA JS</div>
     </header>
 
     <div class="container">
@@ -206,76 +33,41 @@
             <div class="icon-circle">💧</div>
             <h2>Pump Storage Simulator</h2>
             <p>Simulasi siklus operasional pompa dan monitoring TMA kolam olakan.</p>
-            <div class="btn-launch">Buka Simulator <span>→</span></div>
+            <div class="btn-launch">Buka Simulator →</div>
         </div>
 
         <div class="calc-card" onclick="bukaHalaman('pipe-energy.html')">
             <div class="icon-circle">⚙️</div>
             <h2>Pipe Energy Calculator</h2>
             <p>Analisis distribusi tekanan, head loss, dan verifikasi spesifikasi pipa.</p>
-            <div class="btn-launch">Buka Calculator <span>→</span></div>
+            <div class="btn-launch">Buka Calculator →</div>
         </div>
 
         <div class="calc-card" onclick="bukaHalaman('peta-spasial.html')">
-            <span style="position: absolute; top: 20px; right: 20px; background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold;">New</span>
             <div class="icon-circle">🌍</div>
             <h2>Spatial Area Analyzer</h2>
             <p>Analisis Catchment Area dan deteksi stasiun hujan secara otomatis.</p>
-            <div class="btn-launch">Buka WebGIS <span>→</span></div>
+            <div class="btn-launch">Buka WebGIS →</div>
         </div>
 
-        <div class="calc-card card-recap" onclick="bukaHalaman('data-hujan.html')">
-            <div class="icon-circle">📅</div>
-            <h2>Rainfall Historical Recap</h2>
-            <p>Data Curah Hujan Tahunan 2000-2024. Siap salin (copy) ke Excel.</p>
-            <div class="btn-launch">Buka Rekapitulasi <span>→</span></div>
-        </div>
-
-        <div class="calc-card card-admin" onclick="window.location.href='/admin/'">
+        <div class="calc-card" onclick="bukaHalaman('data-hujan.html')">
             <div class="icon-circle">📊</div>
-            <h2>Rainfall Database Admin</h2>
-            <p>Input dan Manajemen Data Hujan Harian (Otoritas Terbatas).</p>
-            <div class="btn-launch">Buka Database <span>→</span></div>
+            <h2>Rainfall Data Hub</h2>
+            <p>Pusat Data Master: Rekapitulasi, Manajemen Data & Export Excel.</p>
+            <div class="btn-launch" style="background: #10b981;">Buka Manajemen Data →</div>
         </div>
     </div>
 
-    <footer>
-        <strong>Rentek SDA JS</strong> • 2026 Engineering Portal<br>
-        Seksi Perencanaan - Sudin Sumber Daya Air Jakarta Selatan
-    </footer>
-</div>
+    <footer><strong>Rentek SDA JS</strong> • 2026 Engineering Portal</footer>
 
-<div id="app-portal">
-    <button class="btn-back-floating" onclick="kembaliKeMenu()">
-        ⬅ KEMBALI KE DASHBOARD
-    </button>
-    <iframe id="app-frame" src=""></iframe>
-</div>
+    <div id="app-portal">
+        <button class="btn-back" onclick="kembali()">⬅ DASHBOARD</button>
+        <iframe id="app-frame"></iframe>
+    </div>
 
-<script>
-    function bukaHalaman(url) {
-        document.getElementById('app-portal').style.display = 'block';
-        document.getElementById('dashboard-content').style.display = 'none';
-        document.getElementById('app-frame').src = url;
-    }
-
-    function kembaliKeMenu() {
-        document.getElementById('app-portal').style.display = 'none';
-        document.getElementById('dashboard-content').style.display = 'flex';
-        document.getElementById('app-frame').src = '';
-    }
-
-    if (window.netlifyIdentity) {
-        window.netlifyIdentity.on("init", user => {
-            if (!user) {
-                window.netlifyIdentity.on("login", () => {
-                    document.location.href = "/admin/";
-                });
-            }
-        });
-    }
-</script>
-
+    <script>
+        function bukaHalaman(u) { document.getElementById('app-portal').style.display='block'; document.getElementById('app-frame').src=u; }
+        function kembali() { document.getElementById('app-portal').style.display='none'; document.getElementById('app-frame').src=''; }
+    </script>
 </body>
 </html>
-
