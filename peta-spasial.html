@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA Jaksel - Final Spatial Rainfall Analyst</title>
+    <title>SDA Jaksel - Spatial Rainfall Analyst Final</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --accent: #f59e0b; --text: #f8fafc; --teal: #2dd4bf; }
@@ -64,6 +64,7 @@
 <script>
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRMWvfZncodk-zHrNy7h586o6VKEbMTxe8NCTeV61xL-LbBKSySSqqbxay_eD7LzBhp1PQVgknLoGzx/pub?output=csv";
 
+    // Daftar stasiun dengan nama "Sunter III Rawa Badak"
     const STATIONS = [
         { n: "Kemayoran", lat: -6.15559, lng: 106.84 },
         { n: "Halim", lat: -6.27036, lng: 106.88926 },
@@ -85,7 +86,7 @@
         { n: "Teluk Gong", lat: -6.1335, lng: 106.777649 },
         { n: "Pulo Gadung", lat: -6.19097, lng: 106.904213 },
         { n: "Sunter Kodamar", lat: -6.15508, lng: 106.886893 },
-        { n: "Rawa Badak", lat: -6.12107, lng: 106.896744 },
+        { n: "Sunter III Rawa Badak", lat: -6.12107, lng: 106.896744 },
         { n: "Pompa Cideng", lat: -6.17355, lng: 106.806328 }
     ];
 
@@ -140,12 +141,9 @@
         document.getElementById('body-spatial').innerHTML = sHtml;
         document.getElementById('spatialResult').style.display = 'block';
 
-        // Hitung Hujan
         const res = await fetch(CSV_URL);
         const text = await res.text();
         const lines = text.split('\n').filter(l => l.trim() !== "");
-        
-        // Membersihkan Header (Krusial: Menghapus "Enter" di dalam teks)
         const headers = lines[0].split(',').map(h => h.trim().replace(/[\r\n]/g, " ").replace(/"/g, ""));
 
         let rHtml = "";
@@ -155,7 +153,12 @@
             let p_wil = 0;
 
             headers.forEach((h, idx) => {
-                const match = thiessenFactors.find(f => h.toLowerCase().includes(f.name.toLowerCase()) || f.name.toLowerCase().includes(h.toLowerCase()));
+                const match = thiessenFactors.find(f => {
+                    // Logika pencocokan yang lebih fleksibel untuk nama stasiun
+                    let hClean = h.toLowerCase().replace(/\s+/g, '');
+                    let fClean = f.name.toLowerCase().replace(/\s+/g, '');
+                    return hClean.includes(fClean) || fClean.includes(hClean);
+                });
                 if (match) {
                     p_wil += (parseFloat(cols[idx]) || 0) * match.ci;
                 }
