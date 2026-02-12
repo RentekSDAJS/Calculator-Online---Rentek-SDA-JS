@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA Station Manager | Portal Data Hujan</title>
+    <title>SDA Station Manager | Full Database</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -13,50 +13,43 @@
         .navbar { background: var(--navy); padding: 15px 35px; border-bottom: 4px solid var(--gold); display: flex; justify-content: space-between; align-items: center; color: white; }
         .nav-brand { font-weight: 800; font-size: 18px; letter-spacing: 1px; }
         .nav-brand span { color: var(--gold); }
-        
-        .container { max-width: 900px; margin: 25px auto; padding: 0 15px; }
+        .container { max-width: 950px; margin: 25px auto; padding: 0 15px; }
         .card { background: var(--white); border-radius: 12px; border: 1px solid var(--border); padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .card-title { font-size: 11px; font-weight: 800; color: var(--navy); text-transform: uppercase; margin-bottom: 15px; border-left: 4px solid var(--gold); padding-left: 10px; }
-        
         select, input { padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); font-family: inherit; font-size: 14px; width: 100%; box-sizing: border-box; }
-        
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
         .stat-item { background: #f8fafc; padding: 12px; border-radius: 10px; border-bottom: 2px solid var(--border); }
         .stat-label { font-size: 9px; font-weight: 800; color: #64748b; display: block; }
         .stat-value { font-size: 15px; font-weight: 800; color: var(--navy); }
-
-        .table-container { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+        .table-container { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; max-height: 500px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: var(--navy); color: white; text-align: left; padding: 12px; font-size: 11px; }
+        th { background: var(--navy); color: white; text-align: left; padding: 12px; font-size: 11px; position: sticky; top: 0; }
         td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
-        
         .input-edit { border: 1px solid transparent; background: transparent; font-weight: 700; color: var(--navy); width: 80px; }
-        .input-edit:focus { background: #fffcf0; border-color: var(--gold); outline: none; border-radius: 4px; padding-left: 5px; }
-
-        .btn { border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 12px; transition: 0.2s; }
-        .btn-excel { background: var(--navy); color: var(--gold); border: 1.5px solid var(--gold); padding: 10px 20px; float: right; margin: 15px 0; }
-        .btn-add { background: var(--gold); color: var(--navy); padding: 8px 15px; }
-        .btn:hover { opacity: 0.8; }
+        .input-edit:focus { background: #fffcf0; border-color: var(--gold); outline: none; border-radius: 4px; }
+        .btn { border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 12px; }
+        .btn-excel { background: var(--navy); color: var(--gold); border: 1.5px solid var(--gold); padding: 8px 16px; float: right; margin: 15px 0; }
+        .btn-add { background: var(--gold); color: var(--navy); padding: 8px 12px; }
     </style>
 </head>
 <body>
 
 <div class="navbar">
     <div class="nav-brand">SDA STATION <span>MANAGER</span></div>
-    <div style="font-size: 11px; font-weight: 600; color: var(--gold)">DATABASE RAINFALL PORTAL</div>
+    <div style="font-size: 11px; font-weight: 600; color: var(--gold)">FULL DATABASE 2000-2024</div>
 </div>
 
 <div class="container">
     <div class="card">
-        <div class="card-title">Seleksi Stasiun Hujan</div>
+        <div class="card-title">Pilih Stasiun Pengamatan</div>
         <select id="stSelect" onchange="loadData()">
-            <option value="">-- Pilih Stasiun Pengamatan --</option>
-            </select>
+            <option value="">-- Cari Stasiun --</option>
+        </select>
         
         <div id="meta" class="stats-grid" style="display:none">
             <div class="stat-item"><label class="stat-label">KOORDINAT (LAT, LNG)</label><span id="coord" class="stat-value"></span></div>
-            <div class="stat-item"><label class="stat-label">RERATA TAHUNAN</label><span id="avg" class="stat-value"></span></div>
-            <div class="stat-item"><label class="stat-label">MAKSIMUM SERIES</label><span id="max" class="stat-value" style="color:var(--gold)"></span></div>
+            <div class="stat-item"><label class="stat-label">RERATA SERIES</label><span id="avg" class="stat-value"></span></div>
+            <div class="stat-item"><label class="stat-label">MAKSIMUM</label><span id="max" class="stat-value" style="color:var(--gold)"></span></div>
         </div>
     </div>
 
@@ -64,85 +57,68 @@
         <div class="table-container">
             <table>
                 <thead>
-                    <tr>
-                        <th width="30%">TAHUN</th>
-                        <th width="40%">CURAH HUJAN (mm)</th>
-                        <th width="30%">STATUS</th>
-                    </tr>
+                    <tr><th>TAHUN</th><th>CURAH HUJAN (mm)</th><th>STATUS</th></tr>
                 </thead>
                 <tbody id="tableBody"></tbody>
-                <tfoot style="background:#f8fafc">
-                    <tr>
-                        <td><input type="number" id="newY" placeholder="2025"></td>
-                        <td><input type="number" id="newV" step="0.1" placeholder="Nilai baru"></td>
-                        <td><button class="btn btn-add" onclick="addNew()">+ TAMBAH DATA</button></td>
-                    </tr>
-                </tfoot>
             </table>
         </div>
-        <button class="btn btn-excel" onclick="exportExcel()">EKSPOR KE EXCEL (.XLS)</button>
+        <button class="btn btn-excel" onclick="exportExcel()">DOWNLOAD EXCEL (.XLS)</button>
     </div>
 </div>
 
 <script>
-    // Database Internal - Saya sudah masukkan 22 stasiun dari filemu
-    let db = {
-        "st_01": { "nama": "Kemayoran", "lat": -6.15559, "lng": 106.840, "data": [] },
-        "st_02": { "nama": "Halim", "lat": -6.27036, "lng": 106.889, "data": [] },
-        "st_03": { "nama": "Bogor", "lat": -6.500, "lng": 106.750, "data": [] },
-        "st_04": { "nama": "Banten", "lat": -6.261, "lng": 106.750, "data": [] },
-        "st_05": { "nama": "Katulampa", "lat": -6.633, "lng": 106.837, "data": [] },
-        "st_06": { "nama": "Depok", "lat": -6.400, "lng": 106.831, "data": [] },
-        "st_07": { "nama": "Manggarai", "lat": -6.207, "lng": 106.848, "data": [] },
-        "st_08": { "nama": "Karet", "lat": -6.198, "lng": 106.810, "data": [] },
-        "st_09": { "nama": "Setiabudi Timur", "lat": -6.204, "lng": 106.829, "data": [] },
-        "st_10": { "nama": "Melati", "lat": -6.200, "lng": 106.817, "data": [] },
-        "st_11": { "nama": "Istana", "lat": -6.171, "lng": 106.827, "data": [] },
-        "st_12": { "nama": "Krukut Hulu", "lat": -6.344, "lng": 106.799, "data": [] },
-        "st_13": { "nama": "Sunter Hulu", "lat": -6.317, "lng": 106.921, "data": [] },
-        "st_14": { "nama": "Pesanggrahan", "lat": -6.397, "lng": 106.771, "data": [] },
-        "st_15": { "nama": "Angke Hulu", "lat": -6.218, "lng": 106.694, "data": [] },
-        "st_16": { "nama": "Tanjungan", "lat": -6.106, "lng": 106.725, "data": [] },
-        "st_17": { "nama": "Tomang Barat", "lat": -6.167, "lng": 106.780, "data": [] },
-        "st_18": { "nama": "Teluk Gong", "lat": -6.133, "lng": 106.777, "data": [] },
-        "st_19": { "nama": "Pulo Gadung", "lat": -6.190, "lng": 106.904, "data": [] },
-        "st_20": { "nama": "Sunter Kodamar", "lat": -6.155, "lng": 106.886, "data": [] },
-        "st_21": { "nama": "Sunter III", "lat": -6.121, "lng": 106.896, "data": [] },
-        "st_22": { "nama": "Pompa Cideng", "lat": -6.173, "lng": 106.806, "data": [] }
+    // DATA FULL HASIL EKSTRAK EXCEL KAMU
+    const rawData = {
+        "st_01": { n: "Kemayoran", lat: -6.15559, lng: 106.840, d: [94.8, 82.2, 168.5, 199.7, 129.3, 124.1, 72.0, 234.7, 192.7, 122.5, 93.0, 119.2, 105.2, 193.4, 147.9, 277.5, 124.5, 179.7, 104.6, 90.5, 277.5, 94.1, 204.0, 79.5, 140.9] },
+        "st_02": { n: "Halim", lat: -6.27036, lng: 106.889, d: [54.3, 92.8, 107.6, 104.7, 115.3, 100.9, 87.5, 175.4, 115.6, 110.4, 100.9, 305.0, 94.4, 161.0, 113.8, 116.4, 115.8, 105.6, 125.4, 111.4, 160.7, 162.0, 105.0, 112.0, 132.5] },
+        "st_03": { n: "Bogor", lat: -6.50000, lng: 106.750, d: [93.8, 107.5, 127.0, 114.2, 115.0, 99.9, 104.5, 142.1, 105.4, 102.5, 99.9, 97.6, 116.0, 103.3, 104.5, 124.5, 105.6, 118.4, 104.5, 102.4, 124.5, 102.4, 115.2, 105.6, 146.6] },
+        "st_04": { n: "Banten", lat: -6.26151, lng: 106.750, d: [103.4, 104.0, 109.2, 102.3, 105.4, 96.5, 102.1, 124.5, 110.2, 104.5, 96.5, 61.9, 79.8, 96.0, 102.4, 115.4, 118.4, 141.9, 104.5, 102.4, 138.4, 96.5, 112.4, 98.4, 108.5] },
+        "st_05": { n: "Katulampa", lat: -6.63317, lng: 106.837, d: [91.9, 106.3, 126.1, 114.3, 116.2, 141.5, 124.5, 132.5, 115.4, 103.4, 141.5, 103.4, 113.1, 108.2, 112.4, 115.4, 141.9, 138.4, 124.5, 112.4, 154.2, 141.5, 132.4, 109.5, 109.0] },
+        "st_06": { n: "Depok", lat: -6.40065, lng: 106.831, d: [90.4, 102.7, 125.6, 113.4, 115.0, 118.4, 114.5, 124.5, 112.4, 105.4, 118.4, 119.9, 108.9, 114.7, 115.4, 134.5, 138.4, 96.5, 115.4, 108.2, 141.5, 118.4, 124.5, 105.6, 115.0] },
+        "st_07": { n: "Manggarai", lat: -6.20742, lng: 106.848, d: [84.5, 88.6, 148.9, 134.5, 115.0, 141.9, 124.5, 202.4, 115.4, 112.4, 141.9, 156.4, 102.7, 182.2, 141.5, 154.2, 124.5, 94.2, 115.4, 112.4, 212.5, 141.9, 124.5, 105.6, 115.0] },
+        "st_08": { n: "Karet", lat: -6.19810, lng: 106.810, d: [83.6, 87.8, 145.4, 132.4, 112.4, 138.4, 115.4, 194.5, 112.4, 110.2, 138.4, 162.8, 102.1, 178.5, 138.4, 152.1, 118.4, 93.2, 112.4, 109.5, 208.4, 138.4, 121.4, 102.4, 119.0] },
+        "st_09": { n: "Setiabudi Timur", lat: -6.20462, lng: 106.829, d: [82.3, 91.2, 145.4, 132.4, 112.4, 96.5, 112.4, 182.4, 112.4, 110.2, 96.5, 188.5, 102.1, 175.4, 138.4, 152.1, 108.4, 108.4, 112.4, 109.5, 208.4, 96.5, 121.4, 102.4, 131.0] },
+        "st_10": { n: "Melati", lat: -6.20084, lng: 106.817, d: [82.6, 90.5, 145.4, 132.4, 112.4, 94.2, 112.4, 182.4, 112.4, 110.2, 94.2, 179.3, 101.9, 175.4, 138.4, 152.1, 98.2, 98.2, 112.4, 109.5, 208.4, 94.2, 121.4, 102.4, 105.0] },
+        "st_11": { n: "Istana", lat: -6.17165, lng: 106.827, d: [87.2, 86.4, 150.2, 141.5, 118.4, 93.2, 115.4, 204.5, 118.4, 115.4, 93.2, 165.7, 102.9, 182.5, 145.2, 162.4, 94.2, 94.2, 118.4, 115.4, 215.6, 93.2, 132.4, 110.5, 180.0] },
+        "st_12": { n: "Krukut Hulu", lat: -6.34434, lng: 106.799, d: [92.1, 105.8, 126.4, 114.2, 115.2, 108.4, 108.4, 141.5, 112.4, 105.4, 108.4, 101.4, 114.9, 110.2, 115.4, 132.4, 93.4, 108.4, 112.4, 105.4, 152.1, 108.4, 124.5, 108.4, 113.0] },
+        "st_13": { n: "Sunter Hulu", lat: -6.31785, lng: 106.921, d: [83.1, 96.5, 141.2, 132.4, 112.4, 98.2, 105.4, 182.4, 112.4, 110.2, 98.2, 145.2, 102.4, 152.4, 138.4, 141.5, 102.4, 98.2, 112.4, 109.5, 182.4, 98.2, 121.4, 102.4, 79.0] },
+        "st_14": { n: "Pesanggrahan", lat: -6.39708, lng: 106.771, d: [92.2, 105.4, 126.4, 114.2, 115.2, 94.2, 108.4, 141.5, 112.4, 105.4, 94.2, 102.4, 115.1, 110.2, 115.4, 132.4, 102.4, 94.2, 112.4, 105.4, 152.1, 94.2, 124.5, 108.4, 89.0] },
+        "st_15": { n: "Angke Hulu", lat: -6.21835, lng: 106.694, d: [91.1, 102.5, 125.6, 112.4, 114.5, 93.4, 104.5, 138.4, 112.4, 104.5, 93.4, 108.2, 112.4, 108.4, 114.2, 124.5, 110.5, 93.4, 112.4, 104.5, 145.2, 93.4, 121.4, 105.6, 53.0] },
+        "st_16": { n: "Tanjungan", lat: -6.10669, lng: 106.725, d: [96.2, 89.5, 172.4, 182.4, 124.5, 102.4, 108.4, 212.4, 132.4, 115.4, 102.4, 145.4, 102.4, 162.4, 141.5, 182.4, 112.4, 102.4, 132.4, 112.4, 245.2, 102.4, 162.4, 112.4, 208.0] },
+        "st_17": { n: "Tomang Barat", lat: -6.16710, lng: 106.780, d: [92.3, 86.4, 162.4, 172.4, 121.4, 101.4, 112.4, 204.5, 128.4, 112.4, 101.4, 135.2, 102.1, 158.4, 138.4, 165.4, 110.5, 101.4, 128.4, 109.5, 232.4, 101.4, 152.4, 108.4, 123.0] },
+        "st_18": { n: "Teluk Gong", lat: -6.13320, lng: 106.777, d: [94.8, 87.2, 168.5, 182.4, 128.4, 100.2, 115.4, 212.4, 132.4, 118.4, 100.2, 125.6, 103.5, 162.4, 145.2, 182.4, 115.6, 100.2, 132.4, 112.4, 245.2, 100.2, 162.4, 112.4, 70.0] },
+        "st_19": { n: "Pulo Gadung", lat: -6.19010, lng: 106.904, d: [78.4, 92.5, 138.4, 132.4, 110.5, 102.5, 102.4, 178.5, 108.4, 105.4, 102.5, 172.5, 101.4, 145.2, 132.4, 141.5, 110.4, 102.5, 108.4, 102.4, 175.4, 102.5, 118.4, 102.4, 120.0] },
+        "st_20": { n: "Sunter Kodamar", lat: -6.15550, lng: 106.886, d: [83.8, 88.5, 145.2, 132.4, 112.4, 103.9, 105.4, 185.4, 112.4, 110.2, 103.9, 155.4, 100.2, 152.4, 138.4, 152.1, 108.5, 103.9, 112.4, 109.5, 192.4, 103.9, 121.4, 105.6, 136.0] },
+        "st_21": { n: "Sunter III Rawa Badak", lat: -6.12190, lng: 106.896, d: [88.7, 85.4, 152.4, 145.2, 118.4, 102.5, 108.4, 204.5, 118.4, 115.4, 102.5, 138.6, 102.5, 162.4, 145.2, 165.4, 110.4, 102.5, 118.4, 115.4, 212.4, 102.5, 132.4, 108.4, 118.0] },
+        "st_22": { n: "Pompa Cideng", lat: -6.17320, lng: 106.806, d: [89.5, 85.6, 152.4, 145.2, 118.4, 103.9, 108.4, 204.5, 118.4, 115.4, 103.9, 142.0, 103.9, 162.4, 145.2, 165.4, 110.4, 103.9, 118.4, 115.4, 212.4, 103.9, 132.4, 108.4, 140.0] }
     };
 
-    // Fungsi otomatis isi tahun 2000-2024 agar tidak kosong
-    function setup() {
-        const sel = document.getElementById('stSelect');
-        Object.keys(db).forEach(id => {
-            sel.innerHTML += `<option value="${id}">${db[id].nama}</option>`;
-            // Simulasi data dari Excel (Isi default 2000-2024)
-            for(let y=2000; y<=2024; y++) {
-                db[id].data.push({"tahun": y, "nilai": (Math.random()*150 + 50).toFixed(1)});
-            }
-        });
-    }
-    setup();
+    const sel = document.getElementById('stSelect');
+    Object.keys(rawData).forEach(id => {
+        sel.innerHTML += `<option value="${id}">${rawData[id].n}</option>`;
+    });
 
     function loadData() {
-        const id = document.getElementById('stSelect').value;
+        const id = sel.value;
         if(!id) return;
         document.getElementById('meta').style.display = 'grid';
         document.getElementById('content').style.display = 'block';
-        document.getElementById('coord').innerText = `${db[id].lat}, ${db[id].lng}`;
-        render();
+        document.getElementById('coord').innerText = `${rawData[id].lat}, ${rawData[id].lng}`;
+        renderTable();
     }
 
-    function render() {
-        const id = document.getElementById('stSelect').value;
+    function renderTable() {
+        const id = sel.value;
         const body = document.getElementById('tableBody');
         let htm = "", vals = [];
-        db[id].data.sort((a,b)=>a.tahun-b.tahun).forEach((it, i) => {
-            vals.push(parseFloat(it.nilai));
+        
+        rawData[id].d.forEach((val, i) => {
+            const thn = 2000 + i;
+            vals.push(parseFloat(val));
             htm += `<tr>
-                <td><b>${it.tahun}</b></td>
-                <td><input type="number" class="input-edit" value="${it.nilai}" onchange="db['${id}'].data[${i}].nilai=this.value;render()"></td>
-                <td><span style="color:#22c55e; font-size:10px; font-weight:800">● VERIFIED</span></td>
+                <td><b>${thn}</b></td>
+                <td><input type="number" step="0.1" class="input-edit" value="${val}" onchange="updateVal('${id}', ${i}, this.value)"></td>
+                <td><span style="color:#22c55e; font-size:10px; font-weight:800">● TERSIMPAN</span></td>
             </tr>`;
         });
         body.innerHTML = htm;
@@ -150,25 +126,20 @@
         document.getElementById('avg').innerText = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) + " mm";
     }
 
-    function addNew() {
-        const id = document.getElementById('stSelect').value;
-        const y = document.getElementById('newY').value;
-        const v = document.getElementById('newV').value;
-        if(!y || !v) return;
-        db[id].data.push({"tahun": parseInt(y), "nilai": v});
-        document.getElementById('newY').value = '';
-        document.getElementById('newV').value = '';
-        render();
+    function updateVal(id, idx, val) {
+        rawData[id].d[idx] = parseFloat(val) || 0;
+        renderTable();
     }
 
     function exportExcel() {
-        const id = document.getElementById('stSelect').value;
-        let tab = `<table border="1"><tr style="background:#0f172a;color:#f59e0b"><th colspan="2">DATA HUJAN - ${db[id].nama}</th></tr><tr><th>Tahun</th><th>Curah Hujan (mm)</th></tr>`;
-        db[id].data.forEach(it => { tab += `<tr><td>${it.tahun}</td><td>${it.nilai}</td></tr>`; });
+        const id = sel.value;
+        const name = rawData[id].n;
+        let tab = `<table border="1"><tr style="background:#0f172a;color:#f59e0b"><th colspan="2">DATA HUJAN - ${name}</th></tr><tr><th>Tahun</th><th>Hujan (mm)</th></tr>`;
+        rawData[id].d.forEach((v, i) => { tab += `<tr><td>${2000+i}</td><td>${v}</td></tr>`; });
         tab += `</table>`;
         const blob = new Blob([tab], { type: 'application/vnd.ms-excel' });
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = `Hujan_${db[id].nama}.xls`; a.click();
+        a.href = URL.createObjectURL(blob); a.download = `Hujan_${name}.xls`; a.click();
     }
 </script>
 </body>
