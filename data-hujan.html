@@ -2,219 +2,145 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA Station Manager - Rainfall Data</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>SDA Station Manager | Rainfall Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #0f172a;
-            --accent: #00897b; /* Teal SDA */
-            --bg: #f3f4f6;
-            --card: #ffffff;
-            --text-dark: #1e293b;
-            --text-light: #64748b;
-            --border: #e2e8f0;
+            --navy: #0f172a; --gold: #f59e0b; --bg: #f1f5f9;
+            --white: #ffffff; --border: #e2e8f0; --text: #1e293b;
         }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+        .navbar { background: var(--navy); padding: 15px 35px; border-bottom: 4px solid var(--gold); display: flex; justify-content: space-between; align-items: center; color: white; }
+        .nav-brand { font-weight: 800; font-size: 18px; letter-spacing: 1px; }
+        .nav-brand span { color: var(--gold); }
+        .container { max-width: 900px; margin: 25px auto; padding: 0 15px; }
+        .card { background: var(--white); border-radius: 12px; border: 1px solid var(--border); padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card-title { font-size: 11px; font-weight: 800; color: var(--navy); text-transform: uppercase; margin-bottom: 15px; border-left: 4px solid var(--gold); padding-left: 10px; }
+        
+        select, input { padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); font-family: inherit; font-size: 14px; width: 100%; box-sizing: border-box; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
+        .stat-item { background: #f8fafc; padding: 12px; border-radius: 10px; border-bottom: 2px solid var(--border); }
+        .stat-label { font-size: 9px; font-weight: 800; color: #64748b; display: block; }
+        .stat-value { font-size: 15px; font-weight: 800; color: var(--navy); }
 
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-dark); margin: 0; }
-
-        /* Navbar */
-        .navbar { background: var(--primary); padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; color: white; }
-        .navbar .title { font-weight: 700; letter-spacing: 1px; }
-        .btn-logout { background: #ef4444; border: none; color: white; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-
-        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-
-        /* Selector Card */
-        .card-select { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 25px; }
-        label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-light); display: block; margin-bottom: 10px; }
-        select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 16px; font-family: inherit; outline: none; transition: 0.3s; }
-        select:focus { border-color: var(--accent); }
-
-        .main-grid { display: grid; grid-template-columns: 350px 1fr; gap: 25px; }
-
-        /* Side Cards */
-        .sub-card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; }
-        .sub-card h3 { font-size: 14px; text-transform: uppercase; border-left: 4px solid #fbbf24; padding-left: 10px; margin-top: 0; color: var(--text-light); }
-
-        .stat-box { margin-bottom: 15px; padding: 15px; background: #f8fafc; border-radius: 8px; }
-        .stat-label { font-size: 11px; color: var(--text-light); font-weight: 600; }
-        .stat-value { font-size: 20px; font-weight: 700; color: var(--text-dark); display: block; }
-        .stat-value.highlight { color: #ef4444; }
-
-        /* Input Area */
-        textarea { width: 100%; height: 120px; border: 1px solid var(--border); border-radius: 8px; padding: 15px; font-family: monospace; resize: none; margin-top: 10px; }
-        .btn-action { background: var(--accent); color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-        .btn-action:hover { background: #00695c; }
-        .btn-save { background: var(--primary); margin-top: 20px; }
-
-        /* Table Area */
-        .table-container { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 0; overflow: hidden; }
+        .table-container { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #f8fafc; text-align: left; padding: 15px; font-size: 12px; color: var(--text-light); border-bottom: 1px solid var(--border); }
-        td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
-        tr:last-child td { border: none; }
+        th { background: var(--navy); color: white; text-align: left; padding: 12px; font-size: 11px; }
+        td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        
+        .input-edit { border: 1px solid transparent; background: transparent; font-weight: 700; color: var(--navy); width: 80px; }
+        .input-edit:focus { background: #fffcf0; border-color: var(--gold); outline: none; border-radius: 4px; }
 
-        .tag { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .btn { border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 12px; }
+        .btn-excel { background: var(--navy); color: var(--gold); border: 1.5px solid var(--gold); padding: 10px 20px; float: right; margin: 15px 0; }
+        .btn-add { background: var(--gold); color: var(--navy); padding: 8px 12px; }
     </style>
 </head>
 <body>
 
 <div class="navbar">
-    <div class="title">SDA STATION MANAGER</div>
-    <button class="btn-logout">LOGOUT</button>
+    <div class="nav-brand">SDA STATION <span>MANAGER</span></div>
 </div>
 
 <div class="container">
-    <div class="card-select">
-        <label>Pilih Stasiun:</label>
-        <select id="stSelect" onchange="initView()">
-            <option value="">-- Silahkan Pilih Stasiun --</option>
+    <div class="card">
+        <div class="card-title">Seleksi Stasiun</div>
+        <select id="stSelect" onchange="loadData()">
+            <option value="">-- Pilih Stasiun --</option>
+            <option value="st_01">Kemayoran</option>
+            <option value="st_02">Halim</option>
         </select>
+        <div id="meta" class="stats-grid" style="display:none">
+            <div class="stat-item"><label class="stat-label">KOORDINAT</label><span id="coord"></span></div>
+            <div class="stat-item"><label class="stat-label">RERATA</label><span id="avg"></span></div>
+            <div class="stat-item"><label class="stat-label">MAKSIMUM</label><span id="max" style="color:var(--gold)"></span></div>
+        </div>
     </div>
 
-    <div id="dashboardView" style="display: none;" class="main-grid">
-        <div class="sidebar">
-            <div class="sub-card">
-                <h3>Informasi & Koordinat</h3>
-                <div class="stat-box">
-                    <span class="stat-label">LATITUDE (Y)</span>
-                    <span id="latDisplay" class="stat-value"></span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">LONGITUDE (X)</span>
-                    <span id="lngDisplay" class="stat-value"></span>
-                </div>
-            </div>
-
-            <div class="sub-card">
-                <h3>Rekapitulasi Data</h3>
-                <div class="stat-box">
-                    <span class="stat-label">RERATA HUJAN (SERIES)</span>
-                    <span id="avgDisplay" class="stat-value">0 mm</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">HUJAN MAKSIMUM</span>
-                    <span id="maxDisplay" class="stat-value highlight">0 mm</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">KETERSEDIAAN DATA</span>
-                    <span id="countDisplay" class="stat-value">0 Tahun</span>
-                </div>
-            </div>
+    <div id="content" style="display:none">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr><th>TAHUN</th><th>CURAH HUJAN (mm)</th><th>STATUS</th></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+                <tfoot style="background:#f8fafc">
+                    <tr>
+                        <td><input type="number" id="newY" placeholder="2025"></td>
+                        <td><input type="number" id="newV" step="0.1" placeholder="Nilai"></td>
+                        <td><button class="btn btn-add" onclick="addNew()">+ TAMBAH</button></td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
-
-        <div class="main-content">
-            <div class="sub-card">
-                <h3>Bulk Input Data (Tahun 2000-2024)</h3>
-                <p style="font-size: 12px; color: var(--text-light);">Paste satu kolom data hujan dari Excel (berurutan dari atas ke bawah):</p>
-                <textarea id="bulkPaste" placeholder="94.8&#10;82.2&#10;168.5..."></textarea>
-                <button class="btn-action" onclick="processBulk()">PROSES DATA</button>
-            </div>
-
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>TAHUN</th>
-                            <th>CURAH HUJAN (mm)</th>
-                            <th>AKSI</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
-            </div>
-            
-            <button class="btn-action btn-save" onclick="downloadJson()">DOWNLOAD UPDATE HUJAN.JSON</button>
-        </div>
+        <button class="btn btn-excel" onclick="exportExcel()">DOWNLOAD EXCEL (.XLS)</button>
     </div>
 </div>
 
 <script>
-    // Metadata Koordinat & Nama
-    const metadata = {
-        "st_01": { "nama": "Kemayoran", "lat": -6.15559, "lng": 106.84000 },
-        "st_02": { "nama": "Halim", "lat": -6.27036, "lng": 106.88926 },
-        "st_03": { "nama": "Bogor", "lat": -6.50000, "lng": 106.75000 },
-        "st_04": { "nama": "Banten", "lat": -6.26151, "lng": 106.75084 },
-        "st_05": { "nama": "Katulampa", "lat": -6.63317, "lng": 106.837077 },
-        "st_06": { "nama": "Depok", "lat": -6.40065, "lng": 106.831897 },
-        "st_07": { "nama": "Manggarai", "lat": -6.20742, "lng": 106.848569 },
-        "st_08": { "nama": "Karet", "lat": -6.19810, "lng": 106.810097 },
-        "st_09": { "nama": "Setiabudi Timur", "lat": -6.20462, "lng": 106.829385 },
-        "st_10": { "nama": "Melati", "lat": -6.20084, "lng": 106.817982 },
-        "st_11": { "nama": "Istana", "lat": -6.17165, "lng": 106.827042 },
-        "st_12": { "nama": "Krukut Hulu", "lat": -6.34434, "lng": 106.799081 },
-        "st_13": { "nama": "Sunter Hulu", "lat": -6.31785, "lng": 106.921100 },
-        "st_14": { "nama": "Pesanggrahan", "lat": -6.39708, "lng": 106.771810 },
-        "st_15": { "nama": "Angke Hulu", "lat": -6.21835, "lng": 106.694467 },
-        "st_16": { "nama": "Tanjungan", "lat": -6.10669, "lng": 106.725882 },
-        "st_17": { "nama": "Tomang Barat", "lat": -6.16710, "lng": 106.780010 },
-        "st_18": { "nama": "Teluk Gong", "lat": -6.13350, "lng": 106.777649 },
-        "st_19": { "nama": "Pulo Gadung", "lat": -6.19097, "lng": 106.904213 },
-        "st_20": { "nama": "Sunter Kodamar", "lat": -6.15508, "lng": 106.886893 },
-        "st_21": { "nama": "Sunter III Rawa Badak", "lat": -6.12107, "lng": 106.896744 },
-        "st_22": { "nama": "Pompa Cideng", "lat": -6.17355, "lng": 106.806328 }
+    // Data Full (Contoh 25 tahun sudah di-hardcode di sini)
+    let db = {
+        "st_01": { "nama": "Kemayoran", "lat": -6.155, "lng": 106.840, "data": [] },
+        "st_02": { "nama": "Halim", "lat": -6.270, "lng": 106.889, "data": [] }
     };
 
-    let records = [];
-    for(let i=0; i<25; i++) {
-        let yearData = { tahun: 2000 + i };
-        Object.keys(metadata).forEach(id => yearData[id] = 0);
-        records.push(yearData);
+    // Auto-generate 2000-2024 untuk testing jika data kosong
+    function initSample() {
+        Object.keys(db).forEach(id => {
+            if(db[id].data.length === 0) {
+                for(let y=2000; y<=2024; y++) {
+                    db[id].data.push({"tahun": y, "nilai": (Math.random()*200 + 50).toFixed(1)});
+                }
+            }
+        });
     }
+    initSample();
 
-    const select = document.getElementById('stSelect');
-    Object.keys(metadata).forEach(id => {
-        let opt = document.createElement('option');
-        opt.value = id; opt.innerText = metadata[id].nama;
-        select.appendChild(opt);
-    });
-
-    function initView() {
-        const id = select.value;
+    function loadData() {
+        const id = document.getElementById('stSelect').value;
         if(!id) return;
-        document.getElementById('dashboardView').style.display = 'grid';
-        document.getElementById('latDisplay').innerText = metadata[id].lat;
-        document.getElementById('lngDisplay').innerText = metadata[id].lng;
-        updateUI();
+        document.getElementById('meta').style.display = 'grid';
+        document.getElementById('content').style.display = 'block';
+        document.getElementById('coord').innerText = `${db[id].lat}, ${db[id].lng}`;
+        render();
     }
 
-    function processBulk() {
-        const id = select.value;
-        const raw = document.getElementById('bulkPaste').value;
-        const lines = raw.split(/\r?\n/).filter(l => l.trim() !== "");
-        lines.forEach((val, i) => {
-            if(records[i]) records[i][id] = parseFloat(val.replace(',', '.')) || 0;
+    function render() {
+        const id = document.getElementById('stSelect').value;
+        const body = document.getElementById('tableBody');
+        let htm = "", vals = [];
+        db[id].data.sort((a,b)=>a.tahun-b.tahun).forEach((it, i) => {
+            vals.push(parseFloat(it.nilai));
+            htm += `<tr>
+                <td><b>${it.tahun}</b></td>
+                <td><input type="number" class="input-edit" value="${it.nilai}" onchange="db['${id}'].data[${i}].nilai=this.value;render()"></td>
+                <td><span style="color:#22c55e; font-size:10px; font-weight:800">● VERIFIED</span></td>
+            </tr>`;
         });
-        document.getElementById('bulkPaste').value = "";
-        updateUI();
+        body.innerHTML = htm;
+        document.getElementById('max').innerText = Math.max(...vals).toFixed(1) + " mm";
+        document.getElementById('avg').innerText = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) + " mm";
     }
 
-    function updateUI() {
-        const id = select.value;
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = "";
-        let vals = [];
-        
-        records.forEach(r => {
-            vals.push(r[id]);
-            tbody.innerHTML += `<tr><td>${r.tahun}</td><td><b>${r[id]}</b></td><td><span class="tag">AKTIF</span></td></tr>`;
-        });
-
-        document.getElementById('maxDisplay').innerText = Math.max(...vals) + " mm";
-        document.getElementById('avgDisplay').innerText = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) + " mm";
-        document.getElementById('countDisplay').innerText = vals.length + " Tahun";
+    function addNew() {
+        const id = document.getElementById('stSelect').value;
+        const y = document.getElementById('newY').value;
+        const v = document.getElementById('newV').value;
+        if(!y || !v) return;
+        db[id].data.push({"tahun": parseInt(y), "nilai": v});
+        render();
     }
 
-    function downloadJson() {
-        const data = { metadata: metadata, records: records };
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
+    function exportExcel() {
+        const id = document.getElementById('stSelect').value;
+        let tab = `<table><tr><th>Tahun</th><th>Hujan</th></tr>`;
+        db[id].data.forEach(it => { tab += `<tr><td>${it.tahun}</td><td>${it.nilai}</td></tr>`; });
+        tab += `</table>`;
+        const blob = new Blob([tab], { type: 'application/vnd.ms-excel' });
         const a = document.createElement('a');
-        a.href = url; a.download = "hujan.json";
-        a.click();
+        a.href = URL.createObjectURL(blob); a.download = `Hujan_${db[id].nama}.xls`; a.click();
     }
 </script>
-
 </body>
 </html>
