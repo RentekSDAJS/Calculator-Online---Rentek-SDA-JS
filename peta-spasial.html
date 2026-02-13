@@ -2,217 +2,145 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA HYDRO-MASTER V11 | FINAL FIX</title>
+    <title>SDA WEBGIS | PERHITUNGAN THIESSEN & RERATA</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+    
     <style>
-        :root { --navy: #0f172a; --gold: #f59e0b; --emerald: #10b981; --rose: #e11d48; --border: #e2e8f0; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; display: flex; height: 100vh; background: #f8fafc; }
-        #map { flex: 1; }
-        .sidebar { width: 650px; background: white; border-left: 5px solid var(--navy); overflow-y: auto; box-shadow: -10px 0 30px rgba(0,0,0,0.1); }
-        .header { background: var(--navy); color: white; padding: 20px; border-bottom: 5px solid var(--gold); }
-        .content { padding: 20px; }
-        .card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
-        h3 { margin: 0 0 15px 0; font-size: 13px; color: var(--navy); text-transform: uppercase; border-left: 4px solid var(--gold); padding-left: 10px; }
-        .btn-run { width: 100%; padding: 14px; background: var(--navy); color: var(--gold); border: none; border-radius: 8px; font-weight: 800; cursor: pointer; }
-        .btn-run:disabled { opacity: 0.5; }
-        table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 5px; }
-        th { background: #f8fafc; padding: 10px; border: 1px solid var(--border); text-align: left; }
-        td { padding: 10px; border: 1px solid var(--border); }
-        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 9px; }
-        .bg-ok { background: #ecfdf5; color: var(--emerald); }
-        .bg-fail { background: #fef2f2; color: var(--rose); }
-        .st-label { background: transparent !important; border: none !important; color: var(--navy); font-weight: 800; font-size: 10px; text-shadow: 1px 1px 2px white; }
+        :root { --main: #1e293b; --accent: #f59e0b; }
+        body { margin: 0; display: flex; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
+        #map { flex: 2; background: #e5e7eb; }
+        #panel { flex: 1; padding: 20px; background: white; overflow-y: auto; border-left: 4px solid var(--main); }
+        h3 { color: var(--main); border-bottom: 2px solid var(--accent); padding-bottom: 8px; font-size: 16px; margin-top: 25px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; }
+        th { background: var(--main); color: white; padding: 8px; text-align: left; }
+        td { border: 1px solid #e2e8f0; padding: 6px; }
+        .highlight { font-weight: 800; color: #059669; }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
-
-<div class="sidebar">
-    <div class="header">
-        <h1 style="margin:0; font-size:18px;">SDA <span style="color:var(--gold)">HYDRO-MASTER V11</span></h1>
-        <small id="dbInfo">Spatial Analysis System - Standard V11</small>
-    </div>
+<div id="panel">
+    <h2 style="margin-top:0; color:var(--main)">ANALISIS HIDROLOGI</h2>
     
-    <div class="content">
-        <div class="card">
-            <h3>1. Geoprocessing Input</h3>
-            <input type="file" id="uploadFile" accept=".json,.geojson" style="width:100%; margin-bottom:15px">
-            <button id="btnAnalyse" class="btn-run" disabled>JALANKAN ANALISIS KOMPLET</button>
-        </div>
+    <h3>1. Luas Pengaruh Stasiun (Thiessen)</h3>
+    <table id="thiessenTable">
+        <thead>
+            <tr><th>Stasiun</th><th>Luas (km²)</th><th>Bobot (W)</th></tr>
+        </thead>
+        <tbody id="thiessenBody"></tbody>
+    </table>
 
-        <div id="resultsArea" style="display:none">
-            <div class="card">
-                <h3>2. Konfigurasi Desain</h3>
-                <label style="font-size: 11px; font-weight: bold;">Pilih Kala Ulang (Tr):</label>
-                <select id="trSelect" onchange="runCalculations()" style="width:100%; padding:12px; border-radius:8px; border:2px solid var(--navy); font-weight:bold; margin-top:5px;">
-                    <option value="2">2 Tahun</option>
-                    <option value="5">5 Tahun</option>
-                    <option value="10">10 Tahun</option>
-                    <option value="25" selected>25 Tahun</option>
-                    <option value="50">50 Tahun</option>
-                    <option value="100">100 Tahun</option>
-                </select>
-            </div>
-
-            <div class="card">
-                <h3>3. Tabel Distribusi Thiessen</h3>
-                <div id="thiessenTable"></div>
-            </div>
-
-            <div class="card">
-                <h3>4. Perbandingan 4 Metode Frekuensi</h3>
-                <table id="freqTable">
-                    <thead>
-                        <tr>
-                            <th>Metode Analisis</th>
-                            <th>Xt (mm)</th>
-                            <th>Smirnov (Δ)</th>
-                            <th>Chi-Sq (χ²)</th>
-                            <th>Status (5%)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="freqBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    <h3>2. Hujan Rerata Wilayah Tahunan</h3>
+    <table id="avgRainTable">
+        <thead>
+            <tr><th>Tahun</th><th>Hujan Wilayah (mm)</th></tr>
+        </thead>
+        <tbody id="avgRainBody"></tbody>
+    </table>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/turf/6.5.0/turf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.6/jstat.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
-
 <script>
+    // Konfigurasi Proyeksi UTM 48S (Jakarta/Jawa Barat) ke WGS84
     proj4.defs("EPSG:32748", "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs");
 
-    const map = L.map('map').setView([-6.22, 106.84], 11);
+    const map = L.map('map').setView([-6.2297, 106.8295], 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let currentRainWilayah = [], layerGroup = L.layerGroup().addTo(map);
-    let masterDAS = null;
-    const db = JSON.parse(localStorage.getItem('sda_db_final_clean')) || {};
+    const dbSource = JSON.parse(localStorage.getItem('sda_db_final_clean'));
 
-    if(Object.keys(db).length > 0) {
-        document.getElementById('dbInfo').innerText = "✅ " + Object.keys(db).length + " Stasiun Aktif";
-        Object.keys(db).forEach(id => {
-            L.circleMarker([db[id].lat, db[id].lng], {radius:4, color:'#0f172a', fillColor:'#f59e0b', fillOpacity:1}).addTo(map)
-             .bindTooltip(db[id].n, {permanent:true, className:'st-label', direction:'top'});
-        });
-    }
+    async function processThiessen() {
+        if (!dbSource) {
+            alert("Database portal hujan kosong! SINKRONKAN data dulu di data-hujan.html");
+            return;
+        }
 
-    document.getElementById('uploadFile').onchange = (e) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => { 
-            const data = JSON.parse(ev.target.result);
-            let features = data.features || (data.geometries ? data.geometries.map(g => turf.feature(g)) : [data]);
-            
-            // Konversi Koordinat
-            features.forEach(f => {
-                turf.coordEach(f, (c) => {
-                    if (Math.abs(c[0]) > 1000) {
-                        const p = proj4("EPSG:32748", "WGS84", [c[0], c[1]]);
-                        c[0] = p[0]; c[1] = p[1];
-                    }
-                });
+        try {
+            // 1. Load data DAS (Ganti dengan file kamu)
+            const res = await fetch('Kali Sunter.json');
+            let catchment = await res.json();
+
+            // 2. Konversi UTM ke Lat/Long jika diperlukan
+            catchment.features[0].geometry.coordinates[0] = catchment.features[0].geometry.coordinates[0].map(coord => {
+                // Jika angka koordinat > 1000, asumsikan itu UTM
+                if (coord[0] > 1000) {
+                    return proj4("EPSG:32748", "WGS84", coord);
+                }
+                return coord;
             });
 
-            // Perbaikan Geometri & Union (Kunci Utama Agar Terdeteksi)
-            let combined = turf.buffer(features[0], 0);
-            if(features.length > 1) {
-                for(let i=1; i<features.length; i++) {
-                    let nextFeat = turf.buffer(features[i], 0);
-                    combined = turf.union(combined, nextFeat);
+            const catchmentLayer = L.geoJSON(catchment, { style: { color: 'red', weight: 2, fillOpacity: 0.05 } }).addTo(map);
+
+            // 3. Siapkan Titik Stasiun
+            const points = turf.featureCollection(
+                Object.keys(dbSource).map(id => {
+                    const st = dbSource[id];
+                    return turf.point([st.lng, st.lat], { name: st.n, id: id });
+                })
+            );
+
+            // 4. Hitung Poligon Thiessen
+            const bbox = turf.bbox(catchment);
+            const vPolys = turf.voronoi(points, { bbox: bbox });
+
+            let totalArea = 0;
+            let results = [];
+
+            vPolys.features.forEach((poly, i) => {
+                const clipped = turf.intersect(poly, catchment.features[0]);
+                if (clipped) {
+                    const area = turf.area(clipped) / 1000000;
+                    const stName = points.features[i].properties.name;
+                    const stId = points.features[i].properties.id;
+                    totalArea += area;
+                    results.push({ id: stId, name: stName, area: area, geo: clipped });
+                    
+                    L.geoJSON(clipped, { style: { color: '#3b82f6', weight: 1, fillOpacity: 0.2 } })
+                     .bindTooltip(stName).addTo(map);
                 }
+            });
+
+            // 5. Render Tabel Thiessen
+            const tBody = document.getElementById('thiessenBody');
+            results.forEach(r => {
+                const w = r.area / totalArea;
+                r.weight = w; // simpan bobot untuk hitungan rerata
+                tBody.innerHTML += `<tr><td>${r.name}</td><td>${r.area.toFixed(2)}</td><td>${w.toFixed(4)}</td></tr>`;
+            });
+
+            // 6. HITUNG HUJAN RERATA WILAYAH PER TAHUN
+            const rBody = document.getElementById('avgRainBody');
+            const sampleId = Object.keys(dbSource)[0];
+            const tahunCount = dbSource[sampleId].d.length;
+
+            for (let t = 0; t < tahunCount; t++) {
+                let rainAvg = 0;
+                results.forEach(r => {
+                    const rainValue = dbSource[r.id].d[t] || 0;
+                    rainAvg += (rainValue * r.weight);
+                });
+
+                rBody.innerHTML += `
+                    <tr>
+                        <td> Tahun ${2000 + t}</td>
+                        <td class="highlight">${rainAvg.toFixed(2)} mm</td>
+                    </tr>
+                `;
             }
-            masterDAS = turf.buffer(combined, 0); 
 
-            document.getElementById('btnAnalyse').disabled = false;
-            L.geoJSON(masterDAS, {style:{color:'#0f172a', weight:2, fillOpacity:0.1}}).addTo(layerGroup);
-            map.fitBounds(L.geoJSON(masterDAS).getBounds());
-        };
-        reader.readAsText(e.target.files[0]);
-    };
+            map.fitBounds(catchmentLayer.getBounds());
 
-    document.getElementById('btnAnalyse').onclick = () => {
-        if(!masterDAS) return;
-        layerGroup.clearLayers();
-        document.getElementById('resultsArea').style.display = 'block';
-
-        const areaT = turf.area(masterDAS) / 1000000;
-        const bbox = turf.bbox(masterDAS);
-        const pts = turf.featureCollection(Object.keys(db).map(id => turf.point([db[id].lng, db[id].lat], {id:id})));
-        const voronoi = turf.voronoi(pts, {bbox: [bbox[0]-0.5, bbox[1]-0.5, bbox[2]+0.5, bbox[3]+0.5]});
-
-        currentRainWilayah = Array(db[Object.keys(db)[0]].d.length).fill(0);
-        let table = `<table><tr><th>Stasiun</th><th>Luas (km²)</th><th>W</th></tr>`;
-
-        voronoi.features.forEach(cell => {
-            // Repair cell voronoi juga sebelum intersect
-            const intersect = turf.intersect(turf.buffer(cell, 0), masterDAS);
-            if(intersect) {
-                const sId = cell.properties.id;
-                const sArea = turf.area(intersect)/1000000;
-                const weight = sArea / areaT;
-                table += `<tr><td>${db[sId].n}</td><td>${sArea.toFixed(2)}</td><td>${weight.toFixed(4)}</td></tr>`;
-                L.geoJSON(intersect, {style:{color:'#3b82f6', weight:1, fillOpacity:0.3}}).addTo(layerGroup);
-                db[sId].d.forEach((v, idx) => { currentRainWilayah[idx] += (v * weight); });
-            }
-        });
-
-        document.getElementById('thiessenTable').innerHTML = table + `</table>`;
-        runCalculations();
-    };
-
-    function runCalculations() {
-        if(currentRainWilayah.length === 0) return;
-        const Tr = parseInt(document.getElementById('trSelect').value);
-        const n = currentRainWilayah.length;
-        const mean = jStat.mean(currentRainWilayah);
-        const sd = jStat.stdev(currentRainWilayah, true);
-        const logData = currentRainWilayah.map(v => Math.log10(v));
-        const logMean = jStat.mean(logData);
-        const logSd = jStat.stdev(logData, true);
-
-        const dCrit = 1.36 / Math.sqrt(n), chiCrit = 7.815;
-
-        // 1. Normal
-        const Kn = jStat.normal.inv(1 - 1/Tr, 0, 1);
-        const Xt_Norm = mean + Kn * sd;
-
-        // 2. Log Normal
-        const Xt_LogNorm = Math.pow(10, logMean + Kn * logSd);
-
-        // 3. Gumbel
-        const Sn = 1.0915, Yn = 0.5309; 
-        const Yt = -Math.log(-Math.log((Tr - 1) / Tr));
-        const Xt_Gumbel = mean + ((Yt - Yn) / Sn) * sd;
-
-        // 4. Log Pearson III
-        let sumSkew = 0; logData.forEach(v => sumSkew += Math.pow(v - logMean, 3));
-        const Cs = (n * sumSkew) / ((n - 1) * (n - 2) * Math.pow(logSd, 3));
-        const z = jStat.normal.inv(1 - 1/Tr, 0, 1);
-        const K_LP3 = z + (z*z-1)*(Cs/6) + (z*z*z-6*z)*(Cs*Cs/72); 
-        const Xt_LP3 = Math.pow(10, logMean + K_LP3 * logSd);
-
-        const methods = [
-            {id: "Normal", xt: Xt_Norm, sm: 0.045, chi: 10.1},
-            {id: "Log Normal", xt: Xt_LogNorm, sm: 0.038, chi: 5.4},
-            {id: "Gumbel", xt: Xt_Gumbel, sm: 0.032, chi: 4.2},
-            {id: "Log Pearson III", xt: Xt_LP3, sm: 0.025, chi: 2.8}
-        ];
-
-        document.getElementById('freqBody').innerHTML = methods.map(m => {
-            const ok = (m.sm < dCrit && m.chi < chiCrit);
-            return `<tr>
-                <td><b>${m.id}</b></td><td><b>${m.xt.toFixed(2)}</b></td>
-                <td>${m.sm.toFixed(3)}</td><td>${m.chi.toFixed(2)}</td>
-                <td><span class="badge ${ok?'bg-ok':'bg-fail'}">${ok?'LOLOS':'GAGAL'}</span></td>
-            </tr>`;
-        }).join('');
+        } catch (e) {
+            console.error(e);
+            alert("Pastikan file JSON ada dan formatnya benar.");
+        }
     }
+
+    processThiessen();
 </script>
 </body>
 </html>
