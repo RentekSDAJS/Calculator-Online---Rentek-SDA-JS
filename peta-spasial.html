@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA HYDRO-MASTER V11 | ORIGINAL REF</title>
+    <title>SDA HYDRO-MASTER V11 | FINAL FIX</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -32,7 +32,7 @@
 <div class="sidebar">
     <div class="header">
         <h1 style="margin:0; font-size:18px;">SDA <span style="color:var(--gold)">HYDRO-MASTER V11</span></h1>
-        <small id="dbInfo">Precision Spatial Analysis System</small>
+        <small id="dbInfo">Spatial Analysis System - Standard V11</small>
     </div>
     
     <div class="content">
@@ -86,14 +86,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
 <script>
-    // EPSG:32748 (UTM 48S) untuk Kali Sunter
     proj4.defs("EPSG:32748", "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs");
 
     const map = L.map('map').setView([-6.22, 106.84], 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let currentRainWilayah = [], layerGroup = L.layerGroup().addTo(map);
-    let finalGeom = null;
+    let masterDAS = null;
     const db = JSON.parse(localStorage.getItem('sda_db_final_clean')) || {};
 
     if(Object.keys(db).length > 0) {
@@ -107,10 +106,10 @@
     document.getElementById('uploadFile').onchange = (e) => {
         const reader = new FileReader();
         reader.onload = (ev) => { 
-            const raw = JSON.parse(ev.target.result);
-            let features = raw.features || (raw.geometries ? raw.geometries.map(g => turf.feature(g)) : [raw]);
+            const data = JSON.parse(ev.target.result);
+            let features = data.features || (data.geometries ? data.geometries.map(g => turf.feature(g)) : [data]);
             
-            // Re-Proyeksi UTM ke WGS84
+            // Konversi Koordinat
             features.forEach(f => {
                 turf.coordEach(f, (c) => {
                     if (Math.abs(c[0]) > 1000) {
@@ -120,35 +119,39 @@
                 });
             });
 
-            // Gabung poligon (Repair sunter)
-            finalGeom = features[0];
+            // Perbaikan Geometri & Union (Kunci Utama Agar Terdeteksi)
+            let combined = turf.buffer(features[0], 0);
             if(features.length > 1) {
-                for(let i=1; i<features.length; i++) { finalGeom = turf.union(finalGeom, features[i]); }
+                for(let i=1; i<features.length; i++) {
+                    let nextFeat = turf.buffer(features[i], 0);
+                    combined = turf.union(combined, nextFeat);
+                }
             }
-            finalGeom = turf.buffer(finalGeom, 0); // Self-intersection repair
+            masterDAS = turf.buffer(combined, 0); 
 
             document.getElementById('btnAnalyse').disabled = false;
-            L.geoJSON(finalGeom, {style:{color:'#0f172a', weight:2, fillOpacity:0.1}}).addTo(layerGroup);
-            map.fitBounds(L.geoJSON(finalGeom).getBounds());
+            L.geoJSON(masterDAS, {style:{color:'#0f172a', weight:2, fillOpacity:0.1}}).addTo(layerGroup);
+            map.fitBounds(L.geoJSON(masterDAS).getBounds());
         };
         reader.readAsText(e.target.files[0]);
     };
 
     document.getElementById('btnAnalyse').onclick = () => {
-        if(!finalGeom) return;
+        if(!masterDAS) return;
         layerGroup.clearLayers();
         document.getElementById('resultsArea').style.display = 'block';
 
-        const areaT = turf.area(finalGeom) / 1000000;
-        const bbox = turf.bbox(finalGeom);
+        const areaT = turf.area(masterDAS) / 1000000;
+        const bbox = turf.bbox(masterDAS);
         const pts = turf.featureCollection(Object.keys(db).map(id => turf.point([db[id].lng, db[id].lat], {id:id})));
-        const voronoi = turf.voronoi(pts, {bbox: [bbox[0]-0.2, bbox[1]-0.2, bbox[2]+0.2, bbox[3]+0.2]});
+        const voronoi = turf.voronoi(pts, {bbox: [bbox[0]-0.5, bbox[1]-0.5, bbox[2]+0.5, bbox[3]+0.5]});
 
         currentRainWilayah = Array(db[Object.keys(db)[0]].d.length).fill(0);
         let table = `<table><tr><th>Stasiun</th><th>Luas (km²)</th><th>W</th></tr>`;
 
         voronoi.features.forEach(cell => {
-            const intersect = turf.intersect(cell, finalGeom);
+            // Repair cell voronoi juga sebelum intersect
+            const intersect = turf.intersect(turf.buffer(cell, 0), masterDAS);
             if(intersect) {
                 const sId = cell.properties.id;
                 const sArea = turf.area(intersect)/1000000;
@@ -176,11 +179,11 @@
         const dCrit = 1.36 / Math.sqrt(n), chiCrit = 7.815;
 
         // 1. Normal
-        const K_Norm = jStat.normal.inv(1 - 1/Tr, 0, 1);
-        const Xt_Normal = mean + K_Norm * sd;
+        const Kn = jStat.normal.inv(1 - 1/Tr, 0, 1);
+        const Xt_Norm = mean + Kn * sd;
 
         // 2. Log Normal
-        const Xt_LogNormal = Math.pow(10, logMean + K_Norm * logSd);
+        const Xt_LogNorm = Math.pow(10, logMean + Kn * logSd);
 
         // 3. Gumbel
         const Sn = 1.0915, Yn = 0.5309; 
@@ -195,16 +198,16 @@
         const Xt_LP3 = Math.pow(10, logMean + K_LP3 * logSd);
 
         const methods = [
-            {n: "Normal", xt: Xt_Normal, sm: 0.045, chi: 10.1},
-            {n: "Log Normal", xt: Xt_LogNormal, sm: 0.038, chi: 5.4},
-            {n: "Gumbel", xt: Xt_Gumbel, sm: 0.032, chi: 4.2},
-            {n: "Log Pearson III", xt: Xt_LP3, sm: 0.025, chi: 2.8}
+            {id: "Normal", xt: Xt_Norm, sm: 0.045, chi: 10.1},
+            {id: "Log Normal", xt: Xt_LogNorm, sm: 0.038, chi: 5.4},
+            {id: "Gumbel", xt: Xt_Gumbel, sm: 0.032, chi: 4.2},
+            {id: "Log Pearson III", xt: Xt_LP3, sm: 0.025, chi: 2.8}
         ];
 
         document.getElementById('freqBody').innerHTML = methods.map(m => {
             const ok = (m.sm < dCrit && m.chi < chiCrit);
             return `<tr>
-                <td><b>${m.n}</b></td><td><b>${m.xt.toFixed(2)}</b></td>
+                <td><b>${m.id}</b></td><td><b>${m.xt.toFixed(2)}</b></td>
                 <td>${m.sm.toFixed(3)}</td><td>${m.chi.toFixed(2)}</td>
                 <td><span class="badge ${ok?'bg-ok':'bg-fail'}">${ok?'LOLOS':'GAGAL'}</span></td>
             </tr>`;
