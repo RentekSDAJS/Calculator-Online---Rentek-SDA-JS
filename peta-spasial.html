@@ -14,8 +14,9 @@
         body { margin: 0; display: flex; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
         #map { flex: 2; background: #e5e7eb; }
         #panel { flex: 1; padding: 20px; background: white; overflow-y: auto; border-left: 4px solid var(--main); }
+        .upload-zone { border: 2px dashed var(--accent); padding: 15px; text-align: center; border-radius: 8px; background: #fffbeb; margin-bottom: 20px; cursor: pointer; }
         h3 { color: var(--main); border-bottom: 2px solid var(--accent); padding-bottom: 8px; font-size: 16px; margin-top: 25px; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
         th { background: var(--main); color: white; padding: 8px; text-align: left; }
         td { border: 1px solid #e2e8f0; padding: 6px; }
         .highlight { font-weight: 800; color: #059669; }
@@ -27,120 +28,124 @@
 <div id="panel">
     <h2 style="margin-top:0; color:var(--main)">ANALISIS HIDROLOGI</h2>
     
-    <h3>1. Luas Pengaruh Stasiun (Thiessen)</h3>
-    <table id="thiessenTable">
-        <thead>
-            <tr><th>Stasiun</th><th>Luas (km²)</th><th>Bobot (W)</th></tr>
-        </thead>
-        <tbody id="thiessenBody"></tbody>
-    </table>
+    <div class="upload-zone" onclick="document.getElementById('fileIn').click()">
+        <strong>KLIK UNTUK UPLOAD CATCHMENT</strong><br>
+        <small>(Kali Sunter.json / Tebet.json / watershed.json)</small>
+        <input type="file" id="fileIn" style="display:none" accept=".json">
+    </div>
 
-    <h3>2. Hujan Rerata Wilayah Tahunan</h3>
-    <table id="avgRainTable">
-        <thead>
-            <tr><th>Tahun</th><th>Hujan Wilayah (mm)</th></tr>
-        </thead>
-        <tbody id="avgRainBody"></tbody>
-    </table>
+    <div id="resultsSection" style="display:none">
+        <h3>1. Luas Pengaruh Stasiun (Thiessen)</h3>
+        <table>
+            <thead><tr><th>Stasiun</th><th>Luas (km²)</th><th>Bobot (W)</th></tr></thead>
+            <tbody id="thiessenBody"></tbody>
+        </table>
+
+        <h3>2. Hujan Rerata Wilayah Tahunan</h3>
+        <table>
+            <thead><tr><th>Tahun</th><th>Hujan Wilayah (mm)</th></tr></thead>
+            <tbody id="avgRainBody"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-    // Konfigurasi Proyeksi UTM 48S (Jakarta/Jawa Barat) ke WGS84
     proj4.defs("EPSG:32748", "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs");
 
     const map = L.map('map').setView([-6.2297, 106.8295], 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
+    // Ambil Data dari Portal
     const dbSource = JSON.parse(localStorage.getItem('sda_db_final_clean'));
+    const markersGroup = L.layerGroup().addTo(map);
+    const thiessenGroup = L.layerGroup().addTo(map);
 
-    async function processThiessen() {
-        if (!dbSource) {
-            alert("Database portal hujan kosong! SINKRONKAN data dulu di data-hujan.html");
-            return;
-        }
-
-        try {
-            // 1. Load data DAS (Ganti dengan file kamu)
-            const res = await fetch('Kali Sunter.json');
-            let catchment = await res.json();
-
-            // 2. Konversi UTM ke Lat/Long jika diperlukan
-            catchment.features[0].geometry.coordinates[0] = catchment.features[0].geometry.coordinates[0].map(coord => {
-                // Jika angka koordinat > 1000, asumsikan itu UTM
-                if (coord[0] > 1000) {
-                    return proj4("EPSG:32748", "WGS84", coord);
-                }
-                return coord;
-            });
-
-            const catchmentLayer = L.geoJSON(catchment, { style: { color: 'red', weight: 2, fillOpacity: 0.05 } }).addTo(map);
-
-            // 3. Siapkan Titik Stasiun
-            const points = turf.featureCollection(
-                Object.keys(dbSource).map(id => {
-                    const st = dbSource[id];
-                    return turf.point([st.lng, st.lat], { name: st.n, id: id });
-                })
-            );
-
-            // 4. Hitung Poligon Thiessen
-            const bbox = turf.bbox(catchment);
-            const vPolys = turf.voronoi(points, { bbox: bbox });
-
-            let totalArea = 0;
-            let results = [];
-
-            vPolys.features.forEach((poly, i) => {
-                const clipped = turf.intersect(poly, catchment.features[0]);
-                if (clipped) {
-                    const area = turf.area(clipped) / 1000000;
-                    const stName = points.features[i].properties.name;
-                    const stId = points.features[i].properties.id;
-                    totalArea += area;
-                    results.push({ id: stId, name: stName, area: area, geo: clipped });
-                    
-                    L.geoJSON(clipped, { style: { color: '#3b82f6', weight: 1, fillOpacity: 0.2 } })
-                     .bindTooltip(stName).addTo(map);
-                }
-            });
-
-            // 5. Render Tabel Thiessen
-            const tBody = document.getElementById('thiessenBody');
-            results.forEach(r => {
-                const w = r.area / totalArea;
-                r.weight = w; // simpan bobot untuk hitungan rerata
-                tBody.innerHTML += `<tr><td>${r.name}</td><td>${r.area.toFixed(2)}</td><td>${w.toFixed(4)}</td></tr>`;
-            });
-
-            // 6. HITUNG HUJAN RERATA WILAYAH PER TAHUN
-            const rBody = document.getElementById('avgRainBody');
-            const sampleId = Object.keys(dbSource)[0];
-            const tahunCount = dbSource[sampleId].d.length;
-
-            for (let t = 0; t < tahunCount; t++) {
-                let rainAvg = 0;
-                results.forEach(r => {
-                    const rainValue = dbSource[r.id].d[t] || 0;
-                    rainAvg += (rainValue * r.weight);
-                });
-
-                rBody.innerHTML += `
-                    <tr>
-                        <td> Tahun ${2000 + t}</td>
-                        <td class="highlight">${rainAvg.toFixed(2)} mm</td>
-                    </tr>
-                `;
-            }
-
-            map.fitBounds(catchmentLayer.getBounds());
-
-        } catch (e) {
-            console.error(e);
-            alert("Pastikan file JSON ada dan formatnya benar.");
-        }
+    // Tampilkan Titik Stasiun dari Portal Hujan
+    function showStations() {
+        if (!dbSource) return;
+        Object.keys(dbSource).forEach(id => {
+            const st = dbSource[id];
+            L.circleMarker([st.lat, st.lng], { radius: 5, color: 'blue', fillOpacity: 1 })
+             .addTo(markersGroup)
+             .bindTooltip(st.n, { permanent: true, direction: 'top', offset: [0, -5] });
+        });
     }
+    showStations();
 
-    processThiessen();
+    // Handle Upload File
+    document.getElementById('fileIn').onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const geojson = JSON.parse(event.target.result);
+            processHydrology(geojson);
+        };
+        reader.readAsText(file);
+    };
+
+    function processHydrology(catchment) {
+        thiessenGroup.clearLayers();
+        document.getElementById('thiessenBody').innerHTML = "";
+        document.getElementById('avgRainBody').innerHTML = "";
+        
+        // 1. Konversi Koordinat jika UTM
+        let features = catchment.features || (catchment.geometries ? catchment.geometries.map(g => ({type: "Feature", geometry: g})) : [catchment]);
+        let mainFeature = features[0];
+
+        // Deep copy untuk konversi agar data asli tidak rusak
+        let cleanCoords = JSON.parse(JSON.stringify(mainFeature.geometry.coordinates));
+        
+        const convertCoords = (coords) => {
+            return coords.map(c => {
+                if (Array.isArray(c[0])) return convertCoords(c);
+                return (c[0] > 1000) ? proj4("EPSG:32748", "WGS84", c) : c;
+            });
+        };
+
+        mainFeature.geometry.coordinates = convertCoords(cleanCoords);
+        const catchmentLayer = L.geoJSON(mainFeature, { style: { color: 'red', weight: 2, fillOpacity: 0.1 } }).addTo(thiessenGroup);
+        map.fitBounds(catchmentLayer.getBounds());
+
+        // 2. Analisis Spasial Thiessen
+        const points = turf.featureCollection(Object.keys(dbSource).map(id => {
+            return turf.point([dbSource[id].lng, dbSource[id].lat], { name: dbSource[id].n, id: id });
+        }));
+
+        const bbox = turf.bbox(mainFeature);
+        const vPolys = turf.voronoi(points, { bbox: bbox });
+
+        let results = [];
+        let totalArea = 0;
+
+        vPolys.features.forEach((poly, i) => {
+            const clipped = turf.intersect(poly, mainFeature);
+            if (clipped) {
+                const area = turf.area(clipped) / 1000000;
+                const stData = points.features[i].properties;
+                totalArea += area;
+                results.push({ id: stData.id, name: stData.name, area: area, geo: clipped });
+                
+                L.geoJSON(clipped, { style: { color: '#3b82f6', weight: 1, fillOpacity: 0.3 } }).addTo(thiessenGroup);
+            }
+        });
+
+        // 3. Tampilkan Hasil
+        results.forEach(r => {
+            const weight = r.area / totalArea;
+            r.weight = weight;
+            document.getElementById('thiessenBody').innerHTML += `<tr><td>${r.name}</td><td>${r.area.toFixed(2)}</td><td>${weight.toFixed(4)}</td></tr>`;
+        });
+
+        const tahunCount = dbSource[Object.keys(dbSource)[0]].d.length;
+        for (let t = 0; t < tahunCount; t++) {
+            let rainAvg = 0;
+            results.forEach(r => { rainAvg += (dbSource[r.id].d[t] * r.weight); });
+            document.getElementById('avgRainBody').innerHTML += `<tr><td>Tahun ${2000+t}</td><td class="highlight">${rainAvg.toFixed(2)} mm</td></tr>`;
+        }
+        
+        document.getElementById('resultsSection').style.display = 'block';
+    }
 </script>
 </body>
 </html>
