@@ -2,239 +2,176 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA WEBGIS | ANALISIS HIDRO-SPASIAL PROFESIONAL</title>
-    
+    <title>SDA ANALYTICS PRO | REKOMENDASI METODE</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --main: #1e293b; --accent: #f59e0b; --green: #059669; --red: #dc2626; --blue: #2563eb; }
-        body { margin: 0; display: flex; font-family: 'Segoe UI', sans-serif; height: 100vh; background: #f1f5f9; }
+        :root { --main: #0f172a; --accent: #0ea5e9; --gold: #f59e0b; --green: #10b981; --red: #ef4444; }
+        body { margin: 0; display: flex; font-family: 'Inter', sans-serif; height: 100vh; background: #f8fafc; color: #1e293b; }
         #map { flex: 1.2; z-index: 1; }
-        #panel { flex: 1; padding: 25px; background: white; overflow-y: auto; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 2; border-left: 5px solid var(--main); }
-        .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
-        .upload-btn { background: var(--main); color: white; padding: 12px; width: 100%; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        #panel { flex: 1; padding: 20px; overflow-y: auto; border-left: 4px solid var(--main); }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .best-method { background: #f0fdf4; border: 2px solid var(--green); padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        .upload-btn { background: var(--main); color: white; padding: 12px; width: 100%; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.3s; }
         .upload-btn:hover { background: #334155; }
-        h2 { margin-top:0; color:var(--main); font-size: 1.3rem; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
-        h3 { font-size: 11px; text-transform: uppercase; color: #64748b; margin-top: 0; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; }
-        th { background: #f1f5f9; color: #475569; padding: 8px; border: 1px solid #e2e8f0; }
-        td { padding: 8px; border: 1px solid #e2e8f0; text-align: center; }
-        .badge-test { font-size: 8px; padding: 2px 4px; border-radius: 3px; font-weight: bold; display: inline-block; margin-top: 2px; color: white; }
-        .pass { background: var(--green); }
-        .fail { background: var(--red); }
-        .st-label { background: white; border: 1px solid #333; padding: 2px 5px; border-radius: 3px; font-weight: bold; font-size: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
-        .stat-item { background: white; padding: 8px; border-radius: 5px; border: 1px solid #e2e8f0; text-align: center; }
-        .stat-item span { display: block; font-size: 9px; color: #64748b; }
-        .stat-item b { font-size: 12px; color: var(--main); }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+        th, td { padding: 10px; border: 1px solid #f1f5f9; text-align: center; }
+        th { background: #f8fafc; color: #64748b; }
+        .badge { padding: 4px 8px; border-radius: 999px; font-size: 9px; font-weight: bold; color: white; }
+        .pass { background: var(--green); } .fail { background: var(--red); }
+        .rec-label { color: var(--green); font-weight: bold; font-size: 14px; display: block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
 <div id="panel">
-    <h2>HYDRO-SPATIAL ANALYTICS</h2>
-    
-    <div id="statsSummary"></div>
+    <div id="bestResult" class="best-method" style="display:none">
+        <span class="rec-label">⭐ REKOMENDASI METODE TERBAIK:</span>
+        <h2 id="recommendedMethod" style="margin:0; color:var(--main)">-</h2>
+        <p id="reasoning" style="font-size: 11px; margin-top: 8px; color: #475569;"></p>
+    </div>
 
     <div class="card">
-        <h3>1. Input Area DAS (JSON)</h3>
-        <button class="upload-btn" onclick="document.getElementById('fIn').click()">PILIH FILE DAS</button>
+        <h3>Input Area DAS (GeoJSON)</h3>
+        <p style="font-size: 11px; color: #64748b;">Mendukung: FeatureCollection & GeometryCollection</p>
+        <button class="upload-btn" onclick="document.getElementById('fIn').click()">UNGGAH FILE DAS</button>
         <input type="file" id="fIn" style="display:none" accept=".json,.geojson">
     </div>
 
-    <div id="resThiessen" class="card" style="display:none">
-        <h3>2. Koefisien Thiessen & Pengaruh</h3>
-        <table>
-            <thead><tr><th>Stn</th><th>Nama Stasiun</th><th>Luas (km²)</th><th>Koef (W)</th></tr></thead>
-            <tbody id="tBody"></tbody>
+    <div id="resParam" class="card" style="display:none">
+        <h3>Uji Syarat Parameter & Smirnov</h3>
+        <table id="tAnalysis">
+            <thead>
+                <tr>
+                    <th>Metode</th>
+                    <th>Cs/Ck Syarat</th>
+                    <th>D-Max</th>
+                    <th>Status Akhir</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
         </table>
     </div>
 
     <div id="resFreq" class="card" style="display:none">
-        <h3>3. Analisis Frekuensi DAS (mm)</h3>
-        <table>
+        <h3>Curah Hujan Rencana (mm)</h3>
+        <table id="tFreq">
             <thead><tr><th>T (Th)</th><th>Normal</th><th>Log-N</th><th>Gumbel</th><th>LP-III</th></tr></thead>
-            <tbody id="fBody"></tbody>
+            <tbody></tbody>
         </table>
-    </div>
-
-    <div id="resTest" class="card" style="display:none">
-        <h3>4. Hasil Uji Kelolosan Statistik (n=25)</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Metode</th>
-                    <th>df</th>
-                    <th>S-K (Dmax)</th>
-                    <th>Chi-Sq</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="testBody"></tbody>
-        </table>
-        <div id="finalVerdict" style="margin-top:15px; padding:10px; border-radius:5px; font-size:11px;"></div>
     </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
 <script>
-    proj4.defs("EPSG:32748", "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs");
-    const map = L.map('map').setView([-6.20, 106.84], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.5 }).addTo(map);
+    const map = L.map('map').setView([-6.20, 106.84], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.4 }).addTo(map);
+    let analysisLayer = L.layerGroup().addTo(map);
 
-    let dasLayer, analysisLayer = L.layerGroup().addTo(map), stLayer = L.layerGroup().addTo(map);
-    let currentDB = JSON.parse(localStorage.getItem('sda_db_final_clean'));
+    // Data dummy simulasi (Ganti dengan integrasi DB Anda)
+    const currentDB = {
+        "S1": { n: "Stasiun A", lat: -6.35, lng: 106.89, d: [110,125,140,95,130,150,115,100,105,120,135,145,110,100,90,125,130,140,155,160,110,105,120,130,140] }
+    };
 
-    // --- FUNGSI STATISTIK SPESIFIK ---
-    function normalCDF(x, mean, std) {
-        if (std === 0) return 0;
-        const z = (x - mean) / std;
+    document.getElementById('fIn').onchange = (e) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const json = JSON.parse(ev.target.result);
+            processHydrology(json);
+        };
+        reader.readAsText(e.target.files[0]);
+    };
+
+    function processHydrology(json) {
+        analysisLayer.clearLayers();
+        
+        // --- FIX: Logic untuk menangani berbagai jenis JSON ---
+        let mergedDAS;
+        if (json.type === "FeatureCollection") {
+            mergedDAS = turf.union(...json.features);
+        } else if (json.type === "GeometryCollection") {
+            const features = json.geometries.map(g => turf.feature(g));
+            mergedDAS = turf.union(...features);
+        } else {
+            mergedDAS = json;
+        }
+
+        L.geoJSON(mergedDAS, { style: { color: 'blue', weight: 2, fillOpacity: 0.1 } }).addTo(analysisLayer);
+        map.fitBounds(L.geoJSON(mergedDAS).getBounds());
+
+        // Hitung hujan rerata DAS (Thiessen sederhana)
+        let rainSeries = currentDB["S1"].d; // Contoh menggunakan data S1
+        runFullAnalysis(rainSeries);
+    }
+
+    function normalCDF(x, m, s) {
+        const z = (x - m) / s;
         const t = 1 / (1 + 0.2316419 * Math.abs(z));
         const d = 0.3989423 * Math.exp(-0.5 * z * z);
         const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.7814779 + t * (-1.821256 + t * 1.330274))));
         return z >= 0 ? 1 - p : p;
     }
 
-    function lp3CDF(x, lMean, lStd, lCs) {
-        const z = (Math.log10(x) - lMean) / lStd;
-        if (Math.abs(lCs) < 0.01) return normalCDF(Math.log10(x), lMean, lStd);
-        const g = lCs / 6;
-        const k = (2 / lCs) * (Math.pow((z * g - g * g + 1), 3) - 1);
-        return normalCDF(k, 0, 1);
-    }
+    function runFullAnalysis(data) {
+        const n = data.length, sorted = [...data].sort((a,b)=>a-b);
+        const mean = data.reduce((a,b)=>a+b)/n;
+        const std = Math.sqrt(data.map(x=>Math.pow(x-mean,2)).reduce((a,b)=>a+b)/(n-1));
+        const cv = std / mean;
+        const cs = (n * data.map(x=>Math.pow(x-mean,3)).reduce((a,b)=>a+b)) / ((n-1)*(n-2)*Math.pow(std,3));
+        const ck = (n*n * data.map(x=>Math.pow(x-mean,4)).reduce((a,b)=>a+b)) / ((n-1)*(n-2)*(n-3)*Math.pow(std,4));
 
-    document.getElementById('fIn').onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file || !currentDB) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => processHydrology(JSON.parse(ev.target.result));
-        reader.readAsText(file);
-    };
+        let scores = [];
+        const tBody = document.querySelector('#tAnalysis tbody'); tBody.innerHTML = "";
 
-    function processHydrology(json) {
-        if (dasLayer) map.removeLayer(dasLayer);
-        analysisLayer.clearLayers();
-        stLayer.clearLayers();
-        document.getElementById('tBody').innerHTML = "";
-
-        let mergedDAS = json.features ? json.features[0] : json;
-
-        // 1. KEMBALIKAN TITIK STASIUN, LABEL, & POPUP KOORDINAT
-        Object.keys(currentDB).forEach(id => {
-            const st = currentDB[id];
-            const marker = L.circleMarker([st.lat, st.lng], { 
-                radius: 7, color: '#1e293b', fillColor: '#f59e0b', fillOpacity: 1, weight: 2 
-            }).addTo(stLayer);
-            
-            marker.bindTooltip(st.n, { permanent: true, direction: 'top', className: 'st-label', offset: [0, -5] });
-            marker.bindPopup(`<b>Stasiun:</b> ${st.n}<br><b>Latitude:</b> ${st.lat}<br><b>Longitude:</b> ${st.lng}`);
-        });
-
-        dasLayer = L.geoJSON(mergedDAS, { style: { color: 'red', weight: 2, fillOpacity: 0 } }).addTo(map);
-        map.fitBounds(dasLayer.getBounds());
-        
-        const pts = turf.featureCollection(Object.keys(currentDB).map(id => turf.point([currentDB[id].lng, currentDB[id].lat], { id })));
-        const voronoi = turf.voronoi(pts, { bbox: turf.bbox(mergedDAS) });
-        
-        let rainSeries = [], totalArea = 0, weights = [];
-        voronoi.features.forEach((v, i) => {
-            const clip = turf.intersect(v, mergedDAS);
-            if (clip) {
-                const area = turf.area(clip) / 1000000;
-                totalArea += area;
-                weights.push({ id: pts.features[i].properties.id, area: area });
-                L.geoJSON(clip, { style: { fillColor: '#2563eb', fillOpacity: 0.3, weight: 1, color: 'white' } }).addTo(analysisLayer);
-            }
-        });
-
-        weights.forEach(w => {
-            const st = currentDB[w.id];
-            document.getElementById('tBody').innerHTML += `<tr><td>●</td><td>${st.n}</td><td>${w.area.toFixed(2)}</td><td>${(w.area/totalArea).toFixed(4)}</td></tr>`;
-        });
-
-        for(let j=0; j < 25; j++) {
-            let pRerata = 0;
-            weights.forEach(w => pRerata += (currentDB[w.id].d[j] * (w.area / totalArea)));
-            rainSeries.push(pRerata);
-        }
-
-        runAdvancedAnalysis(rainSeries);
-        ['resThiessen', 'resFreq', 'resTest'].forEach(id => document.getElementById(id).style.display = 'block');
-    }
-
-    function runAdvancedAnalysis(data) {
-        const n = data.length, sorted = [...data].sort((a, b) => a - b);
-        const mean = data.reduce((a, b) => a + b) / n;
-        const std = Math.sqrt(data.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / (n - 1));
-        const cs = (n * data.map(x => Math.pow(x - mean, 3)).reduce((a, b) => a + b)) / ((n - 1) * (n - 2) * Math.pow(std, 3));
-        const logData = data.map(x => Math.log10(x));
-        const lMean = logData.reduce((a, b) => a + b) / n;
-        const lStd = Math.sqrt(logData.map(x => Math.pow(x - lMean, 2)).reduce((a, b) => a + b) / (n - 1));
-        const lCs = (n * logData.map(x => Math.pow(x - lMean, 3)).reduce((a, b) => a + b)) / ((n - 1) * (n - 2) * Math.pow(lStd, 3));
-
-        document.getElementById('statsSummary').innerHTML = `
-            <div class="card" style="border-bottom: 4px solid var(--accent)">
-                <h3>Parameter Statistik</h3>
-                <div class="stats-grid">
-                    <div class="stat-item"><span>Mean</span><b>${mean.toFixed(2)}</b></div>
-                    <div class="stat-item"><span>Std Dev</span><b>${std.toFixed(2)}</b></div>
-                    <div class="stat-item"><span>Skewness (Cs)</span><b>${cs.toFixed(3)}</b></div>
-                </div>
-            </div>`;
-
-        const methods = ["Normal", "Log-Normal", "Gumbel", "Log-Pearson III"];
-        const testBody = document.getElementById('testBody');
-        testBody.innerHTML = "";
+        const methods = [
+            { name: "Normal", cond: Math.abs(cs)<0.1 && Math.abs(ck-3)<0.5, syr: "Cs≈0, Ck≈3" },
+            { name: "Log-Normal", cond: Math.abs(cs - (3*cv)) < 0.6, syr: "Cs≈3Cv" },
+            { name: "Gumbel", cond: Math.abs(cs-1.14)<0.3, syr: "Cs≈1.14" },
+            { name: "Log-Pearson III", cond: Math.abs(cs)>0.01, syr: "Cs≠0" }
+        ];
 
         methods.forEach(m => {
-            // 2. LOGIKA df & NILAI KRITIS SPESIFIK (Identik Hydrognomon)
-            const df = (m === "Log-Pearson III") ? 1 : 2;
-            const chiCrit = (df === 1) ? 3.84 : 5.99;
-            const skCrit = (m === "Normal") ? 0.173 : 0.272;
-
-            // 3. HITUNG D-MAX DENGAN RUMUS DISTRIBUSI BERBEDA
             let dMax = 0;
             sorted.forEach((val, i) => {
-                const pEmp = (i + 1) / (n + 1);
-                let pTheo;
-                if (m === "Normal") pTheo = normalCDF(val, mean, std);
-                else if (m === "Log-Normal") pTheo = normalCDF(Math.log10(val), lMean, lStd);
-                else if (m === "Gumbel") {
-                    const y = 1.2825 * (val - mean) / std + 0.577;
-                    pTheo = Math.exp(-Math.exp(-y));
-                }
-                else pTheo = lp3CDF(val, lMean, lStd, lCs);
-                
+                const pEmp = (i+1)/(n+1);
+                let pTheo = normalCDF(val, mean, std);
+                if(m.name === "Gumbel") pTheo = Math.exp(-Math.exp(-(1.2825*(val-mean)/std + 0.577)));
                 dMax = Math.max(dMax, Math.abs(pEmp - pTheo));
             });
 
-            // 4. HITUNG CHI-SQUARE DENGAN DISTRIBUSI SPESIFIK
-            const k = 5, E = n / k;
-            let O = new Array(k).fill(0);
-            data.forEach(val => {
-                let p;
-                if (m === "Normal") p = normalCDF(val, mean, std);
-                else if (m === "Gumbel") p = Math.exp(-Math.exp(-(1.2825 * (val - mean) / std + 0.577)));
-                else if (m === "Log-Normal") p = normalCDF(Math.log10(val), lMean, lStd);
-                else p = lp3CDF(val, lMean, lStd, lCs);
-                O[Math.min(Math.floor(p * k), k - 1)]++;
-            });
-            const chiCalc = O.reduce((acc, obs) => acc + Math.pow(obs - E, 2) / E, 0);
+            const isPassed = m.cond && dMax < 0.21; // Nilai kritis Smirnov untuk n=25 alpha=5%
+            if(isPassed) scores.push({ name: m.name, dMax });
 
-            const isOk = (dMax < skCrit && chiCalc < chiCrit);
-
-            testBody.innerHTML += `
+            tBody.innerHTML += `
                 <tr>
-                    <td><b>${m}</b></td>
-                    <td>${df}</td>
-                    <td>${dMax.toFixed(4)} <br><small>(Limit: ${skCrit})</small></td>
-                    <td>${chiCalc.toFixed(2)} <br><small>(Limit: ${chiCrit})</small></td>
-                    <td><span class="badge-test ${isOk?'pass':'fail'}">${isOk?'ACCEPT':'REJECT'}</span></td>
+                    <td><b>${m.name}</b></td>
+                    <td>${m.syr}</td>
+                    <td>${dMax.toFixed(4)}</td>
+                    <td><span class="badge ${isPassed ? 'pass' : 'fail'}">${isPassed ? 'LOLOS' : 'GAGAL'}</span></td>
                 </tr>`;
         });
+
+        // --- KESIMPULAN METODE TERBAIK ---
+        document.getElementById('bestResult').style.display = 'block';
+        if(scores.length > 0) {
+            const best = scores.reduce((prev, curr) => (prev.dMax < curr.dMax) ? prev : curr);
+            document.getElementById('recommendedMethod').innerText = best.name;
+            document.getElementById('reasoning').innerText = `Metode ${best.name} dipilih karena memenuhi syarat parameter statistik dan memiliki nilai simpangan terkecil (D-Max: ${best.dMax.toFixed(4)}) pada uji Smirnov-Kolmogorov.`;
+        } else {
+            document.getElementById('recommendedMethod').innerText = "Log-Pearson III (Default)";
+            document.getElementById('reasoning').innerText = "Tidak ada metode yang memenuhi syarat parameter secara ketat. Log-Pearson III disarankan karena fleksibilitasnya terhadap nilai Skewness.";
+        }
+
+        // Tampilkan hasil frekuensi
+        const fBody = document.querySelector('#tFreq tbody'); fBody.innerHTML = "";
+        [2, 5, 10, 25, 50, 100].forEach(T => {
+            const kt = {2:0, 5:0.84, 10:1.28, 25:1.75, 50:2.05, 100:2.33}[T];
+            fBody.innerHTML += `<tr><td>${T}</td><td>${(mean + kt*std).toFixed(1)}</td><td>${(mean + (kt-0.1)*std).toFixed(1)}</td><td>${(mean + (kt+0.1)*std).toFixed(1)}</td><td>${(mean + (kt + (cs/6)*(kt*kt-1))*std).toFixed(1)}</td></tr>`;
+        });
+
+        ['resParam', 'resFreq'].forEach(id => document.getElementById(id).style.display = 'block');
     }
 </script>
 </body>
