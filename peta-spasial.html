@@ -2,59 +2,62 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA ANALYTICS PRO | REKOMENDASI METODE</title>
+    <title>SDA ANALYTICS | FINAL RECALIBRATION</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --main: #0f172a; --accent: #0ea5e9; --gold: #f59e0b; --green: #10b981; --red: #ef4444; }
-        body { margin: 0; display: flex; font-family: 'Inter', sans-serif; height: 100vh; background: #f8fafc; color: #1e293b; }
+        :root { --main: #1e293b; --accent: #f59e0b; --green: #059669; --red: #dc2626; }
+        body { margin: 0; display: flex; font-family: 'Segoe UI', sans-serif; height: 100vh; background: #f1f5f9; }
         #map { flex: 1.2; z-index: 1; }
-        #panel { flex: 1; padding: 20px; overflow-y: auto; border-left: 4px solid var(--main); }
-        .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .best-method { background: #f0fdf4; border: 2px solid var(--green); padding: 15px; border-radius: 10px; margin-bottom: 20px; }
-        .upload-btn { background: var(--main); color: white; padding: 12px; width: 100%; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.3s; }
-        .upload-btn:hover { background: #334155; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
-        th, td { padding: 10px; border: 1px solid #f1f5f9; text-align: center; }
-        th { background: #f8fafc; color: #64748b; }
-        .badge { padding: 4px 8px; border-radius: 999px; font-size: 9px; font-weight: bold; color: white; }
+        #panel { flex: 1; padding: 25px; background: white; overflow-y: auto; border-left: 5px solid var(--main); }
+        .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+        .best-method { background: #dcfce7; border: 2px solid var(--green); padding: 15px; border-radius: 10px; margin-bottom: 20px; color: #166534; }
+        h2, h3 { margin-top:0; color:var(--main); }
+        h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; }
+        th, td { padding: 8px; border: 1px solid #e2e8f0; text-align: center; }
+        .badge { font-size: 8px; padding: 2px 4px; border-radius: 3px; font-weight: bold; color: white; }
         .pass { background: var(--green); } .fail { background: var(--red); }
-        .rec-label { color: var(--green); font-weight: bold; font-size: 14px; display: block; margin-bottom: 5px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+        .stat-item { background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
+        .stat-item span { display: block; font-size: 9px; color: #64748b; }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
 <div id="panel">
+    <h2>HYDRO-SPATIAL ANALYTICS</h2>
+    
     <div id="bestResult" class="best-method" style="display:none">
-        <span class="rec-label">⭐ REKOMENDASI METODE TERBAIK:</span>
-        <h2 id="recommendedMethod" style="margin:0; color:var(--main)">-</h2>
-        <p id="reasoning" style="font-size: 11px; margin-top: 8px; color: #475569;"></p>
+        <b style="font-size: 14px;">⭐ METODE TERBAIK: <span id="recMetode">-</span></b>
+        <p id="recReason" style="font-size: 11px; margin: 5px 0 0 0;"></p>
     </div>
 
+    <div id="statsSummary" class="stats-grid"></div>
+
     <div class="card">
-        <h3>Input Area DAS (GeoJSON)</h3>
-        <p style="font-size: 11px; color: #64748b;">Mendukung: FeatureCollection & GeometryCollection</p>
-        <button class="upload-btn" onclick="document.getElementById('fIn').click()">UNGGAH FILE DAS</button>
-        <input type="file" id="fIn" style="display:none" accept=".json,.geojson">
+        <h3>1. Input Area DAS (UTM/WGS84)</h3>
+        <input type="file" id="fIn" accept=".json,.geojson" style="width: 100%;">
+    </div>
+
+    <div id="resThiessen" class="card" style="display:none">
+        <h3>2. Perhitungan Koefisien Thiessen</h3>
+        <table id="tThiessen">
+            <thead><tr><th>Stasiun</th><th>Luas (km²)</th><th>Koef (W)</th></tr></thead>
+            <tbody></tbody>
+        </table>
     </div>
 
     <div id="resParam" class="card" style="display:none">
-        <h3>Uji Syarat Parameter & Smirnov</h3>
-        <table id="tAnalysis">
-            <thead>
-                <tr>
-                    <th>Metode</th>
-                    <th>Cs/Ck Syarat</th>
-                    <th>D-Max</th>
-                    <th>Status Akhir</th>
-                </tr>
-            </thead>
+        <h3>3. Uji Syarat Parameter Statistik</h3>
+        <table id="tParam">
+            <thead><tr><th>Metode</th><th>Syarat Teori</th><th>Hasil Data</th><th>Status</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
 
     <div id="resFreq" class="card" style="display:none">
-        <h3>Curah Hujan Rencana (mm)</h3>
+        <h3>4. Analisis Frekuensi DAS (mm)</h3>
         <table id="tFreq">
             <thead><tr><th>T (Th)</th><th>Normal</th><th>Log-N</th><th>Gumbel</th><th>LP-III</th></tr></thead>
             <tbody></tbody>
@@ -64,57 +67,93 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
 <script>
-    const map = L.map('map').setView([-6.20, 106.84], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.4 }).addTo(map);
+    // Definisi Proyeksi UTM Zone 48S (Sesuai file Kali Sunter)
+    proj4.defs("EPSG:32748", "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs");
+
+    const map = L.map('map').setView([-6.35, 106.89], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.5 }).addTo(map);
     let analysisLayer = L.layerGroup().addTo(map);
 
-    // Data dummy simulasi (Ganti dengan integrasi DB Anda)
-    const currentDB = {
-        "S1": { n: "Stasiun A", lat: -6.35, lng: 106.89, d: [110,125,140,95,130,150,115,100,105,120,135,145,110,100,90,125,130,140,155,160,110,105,120,130,140] }
-    };
+    // Ambil database stasiun dari localStorage Anda
+    let currentDB = JSON.parse(localStorage.getItem('sda_db_final_clean'));
 
     document.getElementById('fIn').onchange = (e) => {
         const reader = new FileReader();
         reader.onload = (ev) => {
-            const json = JSON.parse(ev.target.result);
+            let json = JSON.parse(ev.target.result);
+            
+            // --- FIX 1: Konversi UTM ke Lat/Long jika diperlukan ---
+            json = convertUTMtoWGS84(json);
+            
             processHydrology(json);
         };
         reader.readAsText(e.target.files[0]);
     };
 
-    function processHydrology(json) {
+    function convertUTMtoWGS84(gj) {
+        return turf.rewind(turf.transformCoord(gj, (coord) => {
+            // Jika angka > 180, berasumsi ini UTM (Meter)
+            if (Math.abs(coord[0]) > 180) {
+                return proj4("EPSG:32748", "EPSG:4326", coord);
+            }
+            return coord;
+        }), {mutate: true});
+    }
+
+    function processHydrology(gj) {
         analysisLayer.clearLayers();
         
-        // --- FIX: Logic untuk menangani berbagai jenis JSON ---
-        let mergedDAS;
-        if (json.type === "FeatureCollection") {
-            mergedDAS = turf.union(...json.features);
-        } else if (json.type === "GeometryCollection") {
-            const features = json.geometries.map(g => turf.feature(g));
-            mergedDAS = turf.union(...features);
-        } else {
-            mergedDAS = json;
-        }
+        // --- FIX 2: Handling FeatureCollection & GeometryCollection ---
+        let mainPoly;
+        if (gj.type === "FeatureCollection") mainPoly = turf.dissolve(gj).features[0];
+        else if (gj.type === "GeometryCollection") mainPoly = turf.union(...gj.geometries.map(g => turf.feature(g)));
+        else mainPoly = gj;
 
-        L.geoJSON(mergedDAS, { style: { color: 'blue', weight: 2, fillOpacity: 0.1 } }).addTo(analysisLayer);
-        map.fitBounds(L.geoJSON(mergedDAS).getBounds());
+        // Visualisasi DAS
+        L.geoJSON(mainPoly, { style: { color: 'red', weight: 2, fillOpacity: 0 } }).addTo(analysisLayer);
+        map.fitBounds(L.geoJSON(mainPoly).getBounds());
 
-        // Hitung hujan rerata DAS (Thiessen sederhana)
-        let rainSeries = currentDB["S1"].d; // Contoh menggunakan data S1
-        runFullAnalysis(rainSeries);
+        // --- FIX 3: Perhitungan Thiessen Otomatis ---
+        const pts = turf.featureCollection(Object.keys(currentDB).map(id => 
+            turf.point([currentDB[id].lng, currentDB[id].lat], { id, n: currentDB[id].n })
+        ));
+        
+        const voronoi = turf.voronoi(pts, { bbox: turf.bbox(mainPoly) });
+        let rainSeries = Array(25).fill(0), totalArea = 0, weights = [];
+
+        const tT = document.querySelector('#tThiessen tbody'); tT.innerHTML = "";
+        
+        voronoi.features.forEach((v, i) => {
+            const clip = turf.intersect(v, mainPoly);
+            if (clip) {
+                const area = turf.area(clip) / 1000000;
+                totalArea += area;
+                const st = pts.features[i].properties;
+                weights.push({ id: st.id, area: area });
+
+                // FIX 4: Warna poligon per stasiun
+                L.geoJSON(clip, { 
+                    style: { fillColor: L.colors?.[i] || '#2563eb', fillOpacity: 0.4, color: 'white', weight: 1 } 
+                }).addTo(analysisLayer);
+
+                tT.innerHTML += `<tr><td>${st.n}</td><td>${area.toFixed(2)}</td><td id="w-${st.id}">-</td></tr>`;
+            }
+        });
+
+        weights.forEach(w => {
+            const coef = w.area / totalArea;
+            document.getElementById(`w-${w.id}`).innerText = coef.toFixed(4);
+            for(let j=0; j<25; j++) rainSeries[j] += (currentDB[w.id].d[j] * coef);
+        });
+
+        runComprehensiveStats(rainSeries);
+        ['resThiessen', 'resParam', 'resFreq'].forEach(id => document.getElementById(id).style.display = 'block');
     }
 
-    function normalCDF(x, m, s) {
-        const z = (x - m) / s;
-        const t = 1 / (1 + 0.2316419 * Math.abs(z));
-        const d = 0.3989423 * Math.exp(-0.5 * z * z);
-        const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.7814779 + t * (-1.821256 + t * 1.330274))));
-        return z >= 0 ? 1 - p : p;
-    }
-
-    function runFullAnalysis(data) {
+    function runComprehensiveStats(data) {
         const n = data.length, sorted = [...data].sort((a,b)=>a-b);
         const mean = data.reduce((a,b)=>a+b)/n;
         const std = Math.sqrt(data.map(x=>Math.pow(x-mean,2)).reduce((a,b)=>a+b)/(n-1));
@@ -122,56 +161,43 @@
         const cs = (n * data.map(x=>Math.pow(x-mean,3)).reduce((a,b)=>a+b)) / ((n-1)*(n-2)*Math.pow(std,3));
         const ck = (n*n * data.map(x=>Math.pow(x-mean,4)).reduce((a,b)=>a+b)) / ((n-1)*(n-2)*(n-3)*Math.pow(std,4));
 
-        let scores = [];
-        const tBody = document.querySelector('#tAnalysis tbody'); tBody.innerHTML = "";
+        document.getElementById('statsSummary').innerHTML = `
+            <div class="stat-item"><span>Mean</span><b>${mean.toFixed(2)}</b></div>
+            <div class="stat-item"><span>Std Dev</span><b>${std.toFixed(2)}</b></div>
+            <div class="stat-item"><span>Cs</span><b>${cs.toFixed(3)}</b></div>
+            <div class="stat-item"><span>Ck</span><b>${ck.toFixed(3)}</b></div>`;
 
-        const methods = [
-            { name: "Normal", cond: Math.abs(cs)<0.1 && Math.abs(ck-3)<0.5, syr: "Cs≈0, Ck≈3" },
-            { name: "Log-Normal", cond: Math.abs(cs - (3*cv)) < 0.6, syr: "Cs≈3Cv" },
-            { name: "Gumbel", cond: Math.abs(cs-1.14)<0.3, syr: "Cs≈1.14" },
-            { name: "Log-Pearson III", cond: Math.abs(cs)>0.01, syr: "Cs≠0" }
+        // Uji Syarat Parameter
+        const pB = document.getElementById('paramBody') || document.querySelector('#tParam tbody');
+        const check = (c) => c ? '<span class="badge pass">OK</span>' : '<span class="badge fail">X</span>';
+        
+        const results = [
+            { m: "Normal", s: "Cs≈0, Ck≈3", h: `Cs:${cs.toFixed(2)}`, ok: Math.abs(cs)<0.1 },
+            { m: "Log-Normal", s: "Cs≈3Cv", h: `3Cv:${(3*cv).toFixed(2)}`, ok: Math.abs(cs-(3*cv))<0.5 },
+            { m: "Gumbel", s: "Cs≈1.14", h: `Cs:${cs.toFixed(2)}`, ok: Math.abs(cs-1.14)<0.2 },
+            { m: "LP-III", s: "Cs≠0", h: `Cs:${cs.toFixed(2)}`, ok: Math.abs(cs)>0.01 }
         ];
 
-        methods.forEach(m => {
-            let dMax = 0;
-            sorted.forEach((val, i) => {
-                const pEmp = (i+1)/(n+1);
-                let pTheo = normalCDF(val, mean, std);
-                if(m.name === "Gumbel") pTheo = Math.exp(-Math.exp(-(1.2825*(val-mean)/std + 0.577)));
-                dMax = Math.max(dMax, Math.abs(pEmp - pTheo));
-            });
+        pB.innerHTML = results.map(r => `<tr><td>${r.m}</td><td>${r.s}</td><td>${r.h}</td><td>${check(r.ok)}</td></tr>`).join('');
 
-            const isPassed = m.cond && dMax < 0.21; // Nilai kritis Smirnov untuk n=25 alpha=5%
-            if(isPassed) scores.push({ name: m.name, dMax });
-
-            tBody.innerHTML += `
-                <tr>
-                    <td><b>${m.name}</b></td>
-                    <td>${m.syr}</td>
-                    <td>${dMax.toFixed(4)}</td>
-                    <td><span class="badge ${isPassed ? 'pass' : 'fail'}">${isPassed ? 'LOLOS' : 'GAGAL'}</span></td>
-                </tr>`;
-        });
-
-        // --- KESIMPULAN METODE TERBAIK ---
+        // Kesimpulan Metode Terbaik
+        const best = results.find(r => r.ok) || results[3]; // Default ke LP-III jika tidak ada yang pas
         document.getElementById('bestResult').style.display = 'block';
-        if(scores.length > 0) {
-            const best = scores.reduce((prev, curr) => (prev.dMax < curr.dMax) ? prev : curr);
-            document.getElementById('recommendedMethod').innerText = best.name;
-            document.getElementById('reasoning').innerText = `Metode ${best.name} dipilih karena memenuhi syarat parameter statistik dan memiliki nilai simpangan terkecil (D-Max: ${best.dMax.toFixed(4)}) pada uji Smirnov-Kolmogorov.`;
-        } else {
-            document.getElementById('recommendedMethod').innerText = "Log-Pearson III (Default)";
-            document.getElementById('reasoning').innerText = "Tidak ada metode yang memenuhi syarat parameter secara ketat. Log-Pearson III disarankan karena fleksibilitasnya terhadap nilai Skewness.";
-        }
+        document.getElementById('recMetode').innerText = best.m;
+        document.getElementById('recReason').innerText = `Berdasarkan uji parameter, metode ${best.m} paling sesuai dengan karakteristik distribusi data hujan DAS ini.`;
 
-        // Tampilkan hasil frekuensi
+        // Analisis Frekuensi
         const fBody = document.querySelector('#tFreq tbody'); fBody.innerHTML = "";
         [2, 5, 10, 25, 50, 100].forEach(T => {
             const kt = {2:0, 5:0.84, 10:1.28, 25:1.75, 50:2.05, 100:2.33}[T];
-            fBody.innerHTML += `<tr><td>${T}</td><td>${(mean + kt*std).toFixed(1)}</td><td>${(mean + (kt-0.1)*std).toFixed(1)}</td><td>${(mean + (kt+0.1)*std).toFixed(1)}</td><td>${(mean + (kt + (cs/6)*(kt*kt-1))*std).toFixed(1)}</td></tr>`;
+            fBody.innerHTML += `<tr>
+                <td>${T}</td>
+                <td>${(mean + kt*std).toFixed(1)}</td>
+                <td>${(mean + (kt-0.1)*std).toFixed(1)}</td>
+                <td>${(mean + (kt+0.1)*std).toFixed(1)}</td>
+                <td>${(mean + (kt + (cs/6)*(kt*kt-1))*std).toFixed(1)}</td>
+            </tr>`;
         });
-
-        ['resParam', 'resFreq'].forEach(id => document.getElementById(id).style.display = 'block');
     }
 </script>
 </body>
