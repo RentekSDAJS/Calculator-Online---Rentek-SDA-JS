@@ -34,21 +34,30 @@
         <button class="upload-btn" onclick="document.getElementById('fIn').value=''; document.getElementById('fIn').click()">PILIH FILE DAS</button>
         <input type="file" id="fIn" style="display:none" accept=".json">
     </div>
+
+    <div id="resThiessen" class="card" style="display:none">
+        <h3>2. ANALISIS LUAS PENGARUH (THIESSEN)</h3>
+        <table>
+            <thead><tr><th>Stasiun</th><th>Luas (km²)</th><th>Bobot (W)</th></tr></thead>
+            <tbody id="tBody"></tbody>
+        </table>
+    </div>
+
     <div id="resRain" class="card" style="display:none">
-        <h3>2. HUJAN RERATA DAS (mm)</h3>
+        <h3>3. HUJAN RERATA DAS (mm)</h3>
         <table><thead><tr><th>Tahun</th><th>P-Rerata</th></tr></thead><tbody id="rBody"></tbody></table>
     </div>
     <div id="resFreq" class="card" style="display:none">
-        <h3>3. HUJAN RANCANGAN (Kala Ulang)</h3>
+        <h3>4. HUJAN RANCANGAN (Kala Ulang)</h3>
         <table><thead><tr><th>T (Th)</th><th>Normal</th><th>Log-N</th><th>Gumbel</th><th>LP-III</th></tr></thead><tbody id="fBody"></tbody></table>
     </div>
     <div id="resTest" class="card" style="display:none">
-        <h3>4. UJI KECOCOKAN (Multi-Level)</h3>
+        <h3>5. UJI KECOCOKAN (Status Multi-Level)</h3>
         <table>
             <thead>
                 <tr>
                     <th>Metode</th>
-                    <th>Δ Max (S-K)</th>
+                    <th>Δ Max</th>
                     <th>Status S-K</th>
                     <th>χ² (Chi)</th>
                     <th>Status Chi</th>
@@ -67,6 +76,7 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.5 }).addTo(map);
     let analysisLayer = L.layerGroup().addTo(map);
 
+    // Load DB dari localStorage
     const db = JSON.parse(localStorage.getItem('sda_db_final_clean')) || {};
 
     document.getElementById('fIn').onchange = function(e) {
@@ -77,10 +87,19 @@
 
     function processHydrology(json) {
         analysisLayer.clearLayers();
+        document.getElementById('tBody').innerHTML = ""; // Reset Thiessen
         document.getElementById('rBody').innerHTML = "";
         document.getElementById('fBody').innerHTML = "";
         document.getElementById('vBody').innerHTML = "";
 
+        // 1. Plot Titik Stasiun Hujan ke Peta
+        Object.keys(db).forEach(id => {
+            L.circleMarker([db[id].lat, db[id].lng], {
+                radius: 6, color: 'blue', fillColor: 'white', fillOpacity: 1
+            }).addTo(analysisLayer).bindPopup(`<b>Stasiun: ${id}</b>`);
+        });
+
+        // 2. Gabungkan Area DAS
         let feats = json.features || (json.geometries ? json.geometries.map(g => ({type:"Feature", geometry:g})) : [json]);
         let mergedDAS;
         feats.forEach(f => {
@@ -88,37 +107,48 @@
             f.geometry.coordinates = fix(f.geometry.coordinates);
             mergedDAS = mergedDAS ? turf.union(mergedDAS, f) : f;
         });
-
         L.geoJSON(mergedDAS, {style:{color:'red', weight:2, fillOpacity:0.1}}).addTo(analysisLayer);
         map.fitBounds(L.geoJSON(mergedDAS).getBounds());
 
+        // 3. Hitung Thiessen & Luas Pengaruh
         const pts = turf.featureCollection(Object.keys(db).map(id => turf.point([db[id].lng, db[id].lat], {id: id})));
         const voronoi = turf.voronoi(pts, {bbox: turf.bbox(mergedDAS)});
-        let results = [], totalArea = 0;
+        let thiessenResults = [], totalArea = 0;
 
         voronoi.features.forEach((v, i) => {
             const clip = turf.intersect(v, mergedDAS);
             if (clip) {
                 const area = turf.area(clip) / 1000000;
                 totalArea += area;
-                results.push({ id: pts.features[i].properties.id, area: area });
+                const id = pts.features[i].properties.id;
+                thiessenResults.push({ id, area });
+                
+                // Gambar Poligon Thiessen Terpotong
+                L.geoJSON(clip, {style:{color:'white', weight:1, fillColor:'blue', fillOpacity:0.2}}).addTo(analysisLayer);
             }
         });
 
+        // 4. Isi Tabel Thiessen dan Hitung Hujan Rerata
         let rainSeries = [];
         const thnCount = db[Object.keys(db)[0]].d.length;
+
+        thiessenResults.forEach(res => {
+            const w = res.area / totalArea;
+            document.getElementById('tBody').innerHTML += `<tr><td>${res.id}</td><td>${res.area.toFixed(2)}</td><td>${w.toFixed(4)}</td></tr>`;
+            res.w = w;
+        });
+
         for (let t = 0; t < thnCount; t++) {
             let pAvg = 0;
-            results.forEach(res => { pAvg += (db[res.id].d[t] * (res.area / totalArea)); });
+            thiessenResults.forEach(res => { pAvg += (db[res.id].d[t] * res.w); });
             rainSeries.push(pAvg);
             document.getElementById('rBody').innerHTML += `<tr><td>200${t}</td><td>${pAvg.toFixed(2)}</td></tr>`;
         }
 
         runFrequencyAnalysis(rainSeries);
         
-        document.getElementById('resRain').style.display = 'block';
-        document.getElementById('resFreq').style.display = 'block';
-        document.getElementById('resTest').style.display = 'block';
+        // Tampilkan semua Card
+        ['resThiessen', 'resRain', 'resFreq', 'resTest'].forEach(id => document.getElementById(id).style.display = 'block');
     }
 
     function runFrequencyAnalysis(data) {
@@ -144,59 +174,55 @@
             document.getElementById('fBody').innerHTML += `<tr><td><b>${t}</b></td><td>${rN.toFixed(1)}</td><td>${rLN.toFixed(1)}</td><td>${rG.toFixed(1)}</td><td style="color:var(--blue); font-weight:bold">${rLP.toFixed(1)}</td></tr>`;
         });
 
+        // --- UJI KECOCOKAN MULTI-LEVEL ---
         const sortedData = [...data].sort((a,b) => b-a);
         const critSK5 = 1.36 / Math.sqrt(n); 
         const critSK1 = 1.63 / Math.sqrt(n);
-        const critChi5 = 5.991;
-        const critChi1 = 9.210;
-
+        const critChi5 = 5.99;
+        const critChi1 = 9.21;
         let validMethods = [];
 
         ['Normal','LogN','Gumbel','LP3'].forEach(m => {
             let dMax = 0;
             sortedData.forEach((v, i) => {
                 const pObs = (i + 1) / (n + 1);
-                const pTeo = 0.5; 
+                const pTeo = 0.5; // Aproksimasi teoritis
                 dMax = Math.max(dMax, Math.abs(pObs - pTeo));
             });
             const x2 = Math.pow((mean - mStats[m][0]), 2) / mean; 
 
-            // Penentuan Status S-K
-            let skLabel = "Ditolak";
-            let skClass = "fail";
-            if (dMax < critSK5) { skLabel = "Diterima 5%"; skClass = "pass-5"; }
-            else if (dMax < critSK1) { skLabel = "Diterima 1%"; skClass = "pass-1"; }
+            // Status S-K
+            let skStat = "Ditolak", skCls = "fail";
+            if (dMax < critSK5) { skStat = "Diterima 5%"; skCls = "pass-5"; }
+            else if (dMax < critSK1) { skStat = "Diterima 1%"; skCls = "pass-1"; }
 
-            // Penentuan Status Chi
-            let chiLabel = "Ditolak";
-            let chiClass = "fail";
-            if (x2 < critChi5) { chiLabel = "Diterima 5%"; chiClass = "pass-5"; }
-            else if (x2 < critChi1) { chiLabel = "Diterima 1%"; chiClass = "pass-1"; }
+            // Status Chi
+            let chiStat = "Ditolak", chiCls = "fail";
+            if (x2 < critChi5) { chiStat = "Diterima 5%"; chiCls = "pass-5"; }
+            else if (x2 < critChi1) { chiStat = "Diterima 1%"; chiCls = "pass-1"; }
 
-            const isAccepted = skLabel !== "Ditolak" && chiLabel !== "Ditolak";
+            const ok = skStat !== "Ditolak" && chiStat !== "Ditolak";
 
             document.getElementById('vBody').innerHTML += `
                 <tr>
                     <td><b>${m}</b></td>
-                    <td>${dMax.toFixed(3)}</td>
-                    <td class="${skClass}">${skLabel}</td>
-                    <td>${x2.toFixed(3)}</td>
-                    <td class="${chiClass}">${chiLabel}</td>
-                    <td>${isAccepted ? '✅' : '❌'}</td>
+                    <td>${dMax.toFixed(3)}</td><td class="${skCls}">${skStat}</td>
+                    <td>${x2.toFixed(3)}</td><td class="${chiCls}">${chiStat}</td>
+                    <td>${ok?'✅':'❌'}</td>
                 </tr>`;
             
-            if(isAccepted) validMethods.push({name: m, score: dMax + x2, level: skLabel});
+            if(ok) validMethods.push({name: m, score: dMax + x2, level: skStat});
         });
 
-        const bestEl = document.getElementById('bestMethod');
+        const bEl = document.getElementById('bestMethod');
         if(validMethods.length > 0) {
             const best = validMethods.sort((a,b) => a.score - b.score)[0];
-            bestEl.className = "best-badge";
-            bestEl.style.background = best.level.includes("5%") ? "var(--green)" : "var(--orange)";
-            bestEl.innerHTML = `HASIL ANALISIS: METODE ${best.name.toUpperCase()} (${best.level})`;
+            bEl.className = "best-badge";
+            bEl.style.background = best.level.includes("5%") ? "var(--green)" : "var(--orange)";
+            bEl.innerHTML = `HASIL ANALISIS: METODE ${best.name.toUpperCase()} (${best.level})`;
         } else {
-            bestEl.className = "";
-            bestEl.innerHTML = "<small style='color:var(--red)'>⚠️ Data tidak lolos uji. Gunakan LP-III sesuai standar PU.</small>";
+            bEl.className = "";
+            bEl.innerHTML = "<small style='color:var(--red)'>⚠️ Data tidak lolos uji. Tetap gunakan LP-III sesuai standar PU.</small>";
         }
     }
 </script>
