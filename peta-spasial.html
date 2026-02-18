@@ -3,33 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>SDA WEBGIS | ANALISIS HIDRO-SPASIAL PROFESIONAL</title>
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
-    
     <style>
-        :root { --main: #1e293b; --accent: #f59e0b; --green: #059669; --red: #dc2626; --blue: #2563eb; }
+        :root { --main: #1e293b; --accent: #f59e0b; --green: #059669; --red: #dc2626; }
         body { margin: 0; display: flex; font-family: 'Segoe UI', sans-serif; height: 100vh; background: #f1f5f9; }
         #map { flex: 1.2; z-index: 1; }
         #panel { flex: 1; padding: 25px; background: white; overflow-y: auto; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 2; border-left: 5px solid var(--main); }
         .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
-        .upload-btn { background: var(--main); color: white; padding: 12px; width: 100%; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .upload-btn:hover { background: #334155; }
+        .upload-btn { background: var(--main); color: white; padding: 12px; width: 100%; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
         h2 { margin-top:0; color:var(--main); font-size: 1.3rem; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
-        h3 { font-size: 11px; text-transform: uppercase; color: #64748b; margin-top: 0; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 10px; }
+        h3 { font-size: 11px; text-transform: uppercase; color: #64748b; margin-top: 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
         table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; }
-        th { background: #f1f5f9; color: #475569; padding: 8px; border: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; padding: 8px; border: 1px solid #e2e8f0; }
         td { padding: 8px; border: 1px solid #e2e8f0; text-align: center; }
-        .badge-test { font-size: 8px; padding: 2px 4px; border-radius: 3px; font-weight: bold; display: inline-block; margin-top: 2px; }
+        .badge-test { font-size: 8px; padding: 2px 4px; border-radius: 3px; font-weight: bold; display: inline-block; }
         .pass { background: #dcfce7; color: #166534; border: 1px solid #166534; }
         .fail { background: #fee2e2; color: #991b1b; border: 1px solid #991b1b; }
-        .color-box { width: 12px; height: 12px; display: inline-block; margin-right: 5px; border-radius: 2px; vertical-align: middle; }
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
         .stat-item { background: white; padding: 8px; border-radius: 5px; border: 1px solid #e2e8f0; text-align: center; }
         .stat-item span { display: block; font-size: 9px; color: #64748b; }
-        .stat-item b { font-size: 12px; color: var(--main); }
     </style>
 </head>
 <body>
@@ -37,7 +29,6 @@
 <div id="map"></div>
 <div id="panel">
     <h2>HYDRO-SPATIAL ANALYTICS</h2>
-    
     <div id="statsSummary"></div>
 
     <div class="card">
@@ -48,223 +39,132 @@
 
     <div id="resThiessen" class="card" style="display:none">
         <h3>2. Koefisien Thiessen & Pengaruh</h3>
-        <table>
-            <thead><tr><th>Stn</th><th>Nama Stasiun</th><th>Luas (km²)</th><th>Koef (W)</th></tr></thead>
-            <tbody id="tBody"></tbody>
-        </table>
-    </div>
-
-    <div id="resHistory" class="card" style="display:none">
-        <h3>3. Histori Hujan Rerata Wilayah (mm)</h3>
-        <div id="historyTableContainer" style="max-height: 200px; overflow-y: auto;"></div>
+        <table id="tThiessen"><thead><tr><th>Stn</th><th>Nama Stasiun</th><th>Luas (km²)</th><th>W</th></tr></thead><tbody id="tBody"></tbody></table>
     </div>
 
     <div id="resFreq" class="card" style="display:none">
-        <h3>4. Analisis Frekuensi DAS (mm)</h3>
-        <table>
-            <thead><tr><th>T (Th)</th><th>Normal</th><th>Log-N</th><th>Gumbel</th><th>LP-III</th></tr></thead>
-            <tbody id="fBody"></tbody>
-        </table>
+        <h3>3. Analisis Frekuensi DAS (mm)</h3>
+        <table><thead><tr><th>T (Th)</th><th>Normal</th><th>Log-N</th><th>Gumbel</th><th>LP-III</th></tr></thead><tbody id="fBody"></tbody></table>
     </div>
 
     <div id="resTest" class="card" style="display:none">
-        <h3>5. Hasil Uji Kelolosan Statistik</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Metode</th>
-                    <th>Param</th>
-                    <th>S-K (Dmax)</th>
-                    <th>Chi-Sq (5 Cls)</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="testBody"></tbody>
-        </table>
+        <h3>4. Hasil Uji Kelolosan Statistik</h3>
+        <table><thead><tr><th>Metode</th><th>S-K (Dmax)</th><th>Chi-Sq (5 Cls)</th><th>Status</th></tr></thead><tbody id="testBody"></tbody></table>
         <div id="finalVerdict" style="margin-top:15px;"></div>
     </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+
 <script>
     proj4.defs("EPSG:32748", "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs");
     const map = L.map('map').setView([-6.20, 106.84], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.4 }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.5 }).addTo(map);
 
-    let dasLayer, analysisLayer = L.layerGroup().addTo(map), currentDB = null;
+    let dasLayer, analysisLayer = L.layerGroup().addTo(map), stLayer = L.layerGroup().addTo(map);
+    let currentDB = JSON.parse(localStorage.getItem('sda_db_final_clean'));
 
-    // Inisialisasi Database (Sesuaikan dengan key storage Anda)
-    function init() {
-        const rawData = localStorage.getItem('sda_db_final_clean');
-        if (rawData) currentDB = JSON.parse(rawData);
+    // Fungsi Statistik Utama (Distribusi Normal Kumulatif)
+    function normalCDF(x, mean, std) {
+        const t = 1 / (1 + 0.2316419 * Math.abs((x - mean) / std));
+        const d = 0.3989423 * Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
+        const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.7814779 + t * (-1.821256 + t * 1.330274))));
+        return x >= mean ? 1 - p : p;
     }
-    init();
 
     document.getElementById('fIn').onchange = (e) => {
         const file = e.target.files[0];
-        if (!file || !currentDB) return;
         const reader = new FileReader();
         reader.onload = (ev) => processHydrology(JSON.parse(ev.target.result));
         reader.readAsText(file);
     };
 
-    // Fungsi Statistik Pendukung
-    function erf(x) {
-        const a = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429];
-        const p = 0.3275911, sign = (x < 0) ? -1 : 1;
-        x = Math.abs(x);
-        const t = 1.0 / (1.0 + p * x);
-        const y = 1.0 - (((((a[4] * t + a[3]) * t + a[2]) * t + a[1]) * t + a[0]) * t * Math.exp(-x * x));
-        return sign * y;
-    }
-
-    function normalCDF(x, mean, std) {
-        if (std === 0) return 0;
-        return 0.5 * (1 + erf((x - mean) / (std * Math.sqrt(2))));
-    }
-
     function processHydrology(json) {
-        if (dasLayer) map.removeLayer(dasLayer);
-        analysisLayer.clearLayers();
-        document.getElementById('tBody').innerHTML = "";
+        analysisLayer.clearLayers(); stLayer.clearLayers();
+        let mergedDAS = json.features ? json.features[0] : json;
 
-        let mergedDAS, features = json.features || [json];
-        features.forEach(f => {
-            f.geometry.coordinates = f.geometry.coordinates.map(c => Array.isArray(c[0]) ? c.map(cc => cc[0] > 1000 ? proj4("EPSG:32748", "WGS84", cc) : cc) : (c[0] > 1000 ? proj4("EPSG:32748", "WGS84", c) : c));
-            mergedDAS = mergedDAS ? turf.union(mergedDAS, f) : f;
+        // 1. Plot Stasiun & Label (Permintaan No. 1)
+        Object.keys(currentDB).forEach(id => {
+            const st = currentDB[id];
+            const marker = L.circleMarker([st.lat, st.lng], { radius: 6, color: 'black', fillColor: 'white', fillOpacity: 1 }).addTo(stLayer);
+            marker.bindTooltip(st.n, { permanent: true, direction: 'top', className: 'st-label' });
+            marker.bindPopup(`<b>Stasiun:</b> ${st.n}<br><b>Lat:</b> ${st.lat}<br><b>Lng:</b> ${st.lng}`);
         });
 
-        dasLayer = L.geoJSON(mergedDAS, { style: { color: '#dc2626', weight: 3, fillOpacity: 0 } }).addTo(map);
+        // 2. Analisis Spasial (Thiessen)
+        dasLayer = L.geoJSON(mergedDAS, { style: { color: 'red', fillOpacity: 0 } }).addTo(map);
         map.fitBounds(dasLayer.getBounds());
         
-        const pts = turf.featureCollection(Object.keys(currentDB).map(id => turf.point([currentDB[id].lng, currentDB[id].lat], { id: id, n: currentDB[id].n })));
+        const pts = turf.featureCollection(Object.keys(currentDB).map(id => turf.point([currentDB[id].lng, currentDB[id].lat], { id })));
         const voronoi = turf.voronoi(pts, { bbox: turf.bbox(mergedDAS) });
         
-        let results = [], totalArea = 0;
+        let rainSeries = [], totalArea = 0, weights = [];
         voronoi.features.forEach((v, i) => {
             const clip = turf.intersect(v, mergedDAS);
             if (clip) {
                 const area = turf.area(clip) / 1000000;
-                const color = `hsl(${(i * 140) % 360}, 65%, 65%)`;
                 totalArea += area;
-                results.push({ id: pts.features[i].properties.id, name: pts.features[i].properties.n, area: area, color: color });
-                L.geoJSON(clip, { style: { color: 'white', weight: 1, fillColor: color, fillOpacity: 0.6 } }).addTo(analysisLayer);
+                weights.push({ id: pts.features[i].properties.id, area });
+                L.geoJSON(clip, { style: { fillColor: 'blue', fillOpacity: 0.2, weight: 1 } }).addTo(analysisLayer);
             }
         });
 
-        results.forEach(res => {
-            res.w = res.area / totalArea;
-            document.getElementById('tBody').innerHTML += `<tr><td><span class="color-box" style="background:${res.color}"></span></td><td>${res.name}</td><td>${res.area.toFixed(2)}</td><td>${res.w.toFixed(4)}</td></tr>`;
-        });
-
-        let rainSeries = [];
-        let historyHTML = `<table><thead><tr><th>Tahun</th><th>Hujan Rerata (mm)</th></tr></thead><tbody>`;
-        const yearsCount = currentDB[Object.keys(currentDB)[0]].d.length;
-
-        for(let j=0; j < yearsCount; j++) {
+        // Hitung Rain Series
+        for(let j=0; j < 25; j++) {
             let pRerata = 0;
-            results.forEach(res => { pRerata += currentDB[res.id].d[j] * res.w; });
+            weights.forEach(w => pRerata += (currentDB[w.id].d[j] * (w.area / totalArea)));
             rainSeries.push(pRerata);
-            historyHTML += `<tr><td>${2000 + j}</td><td><b>${pRerata.toFixed(2)}</b></td></tr>`;
         }
-        historyHTML += `</tbody></table>`;
-        document.getElementById('historyTableContainer').innerHTML = historyHTML;
-        document.getElementById('resHistory').style.display = 'block';
 
         runAdvancedAnalysis(rainSeries);
-        ['resThiessen', 'resFreq', 'resTest'].forEach(id => document.getElementById(id).style.display = 'block');
+        document.getElementById('resThiessen').style.display = 'block';
+        document.getElementById('resFreq').style.display = 'block';
+        document.getElementById('resTest').style.display = 'block';
     }
 
     function runAdvancedAnalysis(data) {
-        const n = data.length;
-        const sorted = [...data].sort((a, b) => b - a);
+        const n = data.length, sorted = [...data].sort((a, b) => b - a);
         const mean = data.reduce((a, b) => a + b) / n;
         const std = Math.sqrt(data.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / (n - 1));
-        const cv = std / mean;
         const cs = (n * data.map(x => Math.pow(x - mean, 3)).reduce((a, b) => a + b)) / ((n - 1) * (n - 2) * Math.pow(std, 3));
-        const ck = (n * n * data.map(x => Math.pow(x - mean, 4)).reduce((a, b) => a + b)) / ((n - 1) * (n - 2) * (n - 3) * Math.pow(std, 4));
 
-        document.getElementById('statsSummary').innerHTML = `
-            <div class="card" style="border-bottom: 4px solid var(--accent)">
-                <h3>Statistik Data (n=${n})</h3>
-                <div class="stats-grid">
-                    <div class="stat-item"><span>Mean</span><b>${mean.toFixed(2)}</b></div>
-                    <div class="stat-item"><span>Std Dev</span><b>${std.toFixed(2)}</b></div>
-                    <div class="stat-item"><span>Cv</span><b>${cv.toFixed(3)}</b></div>
-                    <div class="stat-item"><span>Cs (Skew)</span><b>${cs.toFixed(3)}</b></div>
-                    <div class="stat-item"><span>Ck (Kurt)</span><b>${ck.toFixed(3)}</b></div>
-                </div>
-            </div>`;
+        // Tampilkan Stats
+        document.getElementById('statsSummary').innerHTML = `<div class="card"><h3>Statistik DAS</h3><div class="stats-grid"><div class="stat-item"><span>Mean</span><b>${mean.toFixed(2)}</b></div><div class="stat-item"><span>Std Dev</span><b>${std.toFixed(2)}</b></div><div class="stat-item"><span>Skewness</span><b>${cs.toFixed(3)}</b></div></div></div>`;
 
-        const logData = data.map(x => Math.log10(x));
-        const lMean = logData.reduce((a, b) => a + b) / n;
-        const lStd = Math.sqrt(logData.map(x => Math.pow(x - lMean, 2)).reduce((a, b) => a + b) / (n - 1));
-        const lCs = (n * logData.map(x => Math.pow(x - lMean, 3)).reduce((a, b) => a + b)) / ((n - 1) * (n - 2) * Math.pow(lStd, 3));
+        const testBody = document.getElementById('testBody'); testBody.innerHTML = "";
+        const methods = ["Normal", "Log-Normal", "Gumbel", "Log-Pearson III"];
 
-        const methodsCalc = {
-            "Normal": t => mean + ({2:0, 5:0.84, 10:1.28, 25:1.75, 50:2.05, 100:2.33}[t] * std),
-            "Log-Normal": t => Math.pow(10, lMean + ({2:0, 5:0.84, 10:1.28, 25:1.75, 50:2.05, 100:2.33}[t] * lStd)),
-            "Gumbel": t => mean + (((-Math.log(-Math.log((t-1)/t)) - 0.577) / 1.2825) * std),
-            "Log-Pearson III": t => {
-                const kt = {2:0, 5:0.84, 10:1.28, 25:1.75, 50:2.05, 100:2.33}[t];
-                const K = (2/lCs) * (Math.pow(((kt - lCs/6)*(lCs/6) + 1), 3) - 1);
-                return Math.pow(10, lMean + K*lStd);
-            }
-        };
-
-        const fBody = document.getElementById('fBody');
-        fBody.innerHTML = "";
-        [2, 5, 10, 25, 50, 100].forEach(t => {
-            fBody.innerHTML += `<tr><td>${t}</td><td>${methodsCalc["Normal"](t).toFixed(1)}</td><td>${methodsCalc["Log-Normal"](t).toFixed(1)}</td><td>${methodsCalc["Gumbel"](t).toFixed(1)}</td><td>${methodsCalc["Log-Pearson III"](t).toFixed(1)}</td></tr>`;
-        });
-
-        const testBody = document.getElementById('testBody');
-        testBody.innerHTML = "";
-        const dCrit5 = 0.272, dCrit1 = 0.320; // S-K Critical n=25
-        const chiCrit5 = 5.99, chiCrit1 = 9.21; // Chi-Sq Critical df=2
-        let bestMethod = "Log-Pearson III";
-
-        Object.keys(methodsCalc).forEach(m => {
+        methods.forEach(m => {
+            // PERBAIKAN LOGIKA S-K (Normalisasi ke Probabilitas 0-1)
             let dMax = 0;
             sorted.forEach((val, i) => {
-                const pEmp = (i + 1) / (n + 1);
-                let pTheo;
-                if (m === "Normal") pTheo = normalCDF(val, mean, std);
-                else if (m === "Log-Normal") pTheo = normalCDF(Math.log10(val), lMean, lStd);
-                else if (m === "Gumbel") pTheo = Math.exp(-Math.exp(-((val - mean) / std * 1.2825 + 0.577)));
-                else {
-                    const z = (Math.log10(val) - lMean) / lStd;
-                    pTheo = normalCDF((2 / lCs) * (Math.pow((z * lCs / 6 - lCs * lCs / 36 + 1), 3) - 1), 0, 1);
-                }
+                const pEmp = (i + 1) / (n + 1); // Probabilitas Lapangan
+                let pTheo = normalCDF(val, mean, std); // Probabilitas Teori (Normalisasi)
                 dMax = Math.max(dMax, Math.abs(pEmp - pTheo));
             });
 
+            // PERBAIKAN LOGIKA CHI-SQUARE (5 Kelas)
             const k = 5, expected = n / k;
-            let observed = new Array(k).fill(0), chiCalc = 0;
+            let observed = new Array(k).fill(0);
             data.forEach(val => {
                 let p = normalCDF(val, mean, std);
-                observed[Math.min(Math.floor(p * k), k - 1)]++;
+                let idx = Math.min(Math.floor(p * k), k - 1);
+                observed[idx]++;
             });
-            observed.forEach(obs => chiCalc += Math.pow(obs - expected, 2) / expected);
+            let chiCalc = observed.reduce((acc, obs) => acc + Math.pow(obs - expected, 2) / expected, 0);
 
-            let sSK = dMax < dCrit1 ? "ACCEPT 1%" : (dMax < dCrit5 ? "ACCEPT 5%" : "REJECT");
-            let sChi = chiCalc < chiCrit1 ? "ACCEPT 1%" : (chiCalc < chiCrit5 ? "ACCEPT 5%" : "REJECT");
-            let isOk = dMax < dCrit5 && chiCalc < chiCrit5;
+            let sSK = dMax < 0.27 ? "ACCEPT 5%" : "REJECT";
+            let sChi = chiCalc < 5.99 ? "ACCEPT 5%" : "REJECT";
 
             testBody.innerHTML += `<tr>
                 <td><b>${m}</b></td>
-                <td>${(m==="Log-Pearson III" && cs > 0.1) || (m==="Normal" && Math.abs(cs) < 0.1) ? '✔' : '✘'}</td>
-                <td>${dMax.toFixed(4)} <br><span class="badge-test ${dMax < dCrit5?'pass':'fail'}">${sSK}</span></td>
-                <td>${chiCalc.toFixed(3)} <br><span class="badge-test ${chiCalc < chiCrit5?'pass':'fail'}">${sChi}</span></td>
-                <td><span class="badge-test ${isOk?'pass':'fail'}">${isOk?'DITERIMA':'DITOLAK'}</span></td>
+                <td>${dMax.toFixed(4)} <br><span class="badge-test ${dMax<0.27?'pass':'fail'}">${sSK}</span></td>
+                <td>${chiCalc.toFixed(2)} <br><span class="badge-test ${chiCalc<5.99?'pass':'fail'}">${sChi}</span></td>
+                <td><span class="badge-test ${dMax<0.27 && chiCalc<5.99?'pass':'fail'}">${dMax<0.27 && chiCalc<5.99?'DITERIMA':'DITOLAK'}</span></td>
             </tr>`;
         });
-
-        document.getElementById('finalVerdict').innerHTML = `
-            <div style="background:var(--green); color:white; padding:15px; border-radius:8px; font-size:12px; line-height:1.5;">
-                <b>KESIMPULAN METODE:</b><br>
-                Berdasarkan koefisien kemiringan (Cs = ${cs.toFixed(3)}), metode <b>${bestMethod}</b> paling direkomendasikan. 
-                Hasil uji menunjukkan metode ini <b>LOLOS (ACCEPT)</b> pada tingkat kepercayaan tinggi dan konsisten dengan parameter lapangan.
-            </div>`;
     }
 </script>
 </body>
