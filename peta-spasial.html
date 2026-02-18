@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA WEBGIS | CATCHMENT AUTO-RESET</title>
+    <title>SDA WEBGIS | EXPERT HYDROLOGY SYSTEM</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -10,19 +10,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
     
     <style>
-        :root { --main: #1e293b; --accent: #f59e0b; }
+        :root { --main: #1e293b; --accent: #f59e0b; --blue: #2563eb; --green: #059669; --red: #dc2626; }
         body { margin: 0; display: flex; font-family: 'Segoe UI', sans-serif; height: 100vh; background: #f1f5f9; }
         #map { flex: 2; z-index: 1; }
-        #panel { flex: 1; padding: 25px; background: white; overflow-y: auto; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 2; border-left: 5px solid var(--main); }
+        #panel { flex: 1; padding: 20px; background: white; overflow-y: auto; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 2; border-left: 5px solid var(--main); }
+        
         .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
-        .upload-btn { background: var(--main); color: white; padding: 12px; width: 100%; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
-        h3 { font-size: 13px; text-transform: uppercase; color: #64748b; margin-top: 0; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
-        th { background: #f1f5f9; color: #475569; padding: 8px; text-align: left; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: center; }
-        .color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.1); }
+        .upload-btn { background: var(--main); color: white; padding: 12px; width: 100%; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        
+        h3 { font-size: 12px; text-transform: uppercase; color: #64748b; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th { background: #f1f5f9; padding: 6px; border: 1px solid #cbd5e1; }
+        td { padding: 6px; border: 1px solid #e2e8f0; text-align: center; }
+        
         .val-bold { font-weight: 800; color: var(--main); }
-        .status-tag { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-bottom: 15px; background: #dcfce7; color: #166534; }
+        .pass { color: var(--green); font-weight: bold; }
+        .fail { color: var(--red); font-weight: bold; }
+        .best-badge { background: var(--green); color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 10px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -30,97 +34,72 @@
 <div id="map"></div>
 
 <div id="panel">
-    <h2 style="margin-top:0; color:var(--main);">ANALISIS HIDROLOGI</h2>
-    <div id="dbStatus"><span class="status-tag">SEDANG MENYAMBUNG...</span></div>
-
+    <h2 style="margin-top:0; color:var(--main); letter-spacing:-1px">HYDRO-EXPERT ANALYTICS</h2>
+    
     <div class="card">
-        <h3>1. UPLOAD AREA (JSON)</h3>
-        <button class="upload-btn" onclick="document.getElementById('fIn').click()">PILIH FILE DAS</button>
+        <h3>1. DATA SPASIAL DAS</h3>
+        <button class="upload-btn" onclick="document.getElementById('fIn').value=''; document.getElementById('fIn').click()">UPLOAD JSON</button>
         <input type="file" id="fIn" style="display:none" accept=".json">
     </div>
 
-    <div id="resThiessen" class="card" style="display:none">
-        <h3>2. KOEFISIEN THIESSEN</h3>
+    <div id="resRain" class="card" style="display:none">
+        <h3>2. HUJAN RERATA THIESSEN (mm)</h3>
+        <table id="tRain"><thead><tr><th>Tahun</th><th>P-Rerata</th></tr></thead><tbody id="rBody"></tbody></table>
+    </div>
+
+    <div id="resFreq" class="card" style="display:none">
+        <h3>3. HUJAN RANCANGAN (Kala Ulang)</h3>
         <table>
-            <thead><tr><th style="text-align:left">STASIUN</th><th>LUAS (km²)</th><th>W</th></tr></thead>
-            <tbody id="tBody"></tbody>
+            <thead><tr><th>T (Th)</th><th>Normal</th><th>Log-N</th><th>Gumbel</th><th>LP-III</th></tr></thead>
+            <tbody id="fBody"></tbody>
         </table>
     </div>
 
-    <div id="resRain" class="card" style="display:none">
-        <h3>3. HUJAN RERATA DAS (mm)</h3>
+    <div id="resTest" class="card" style="display:none">
+        <h3>4. UJI KECOCOKAN (Alpha 5%)</h3>
         <table>
-            <thead><tr><th>TAHUN</th><th>P-RERATA</th></tr></thead>
-            <tbody id="rBody"></tbody>
+            <thead><tr><th>Metode</th><th>Δ Max (S-K)</th><th>χ² (Chi)</th><th>Hasil</th></tr></thead>
+            <tbody id="vBody"></tbody>
         </table>
+        <div id="bestMethod"></div>
     </div>
 </div>
 
 <script>
-    // 1. Definisikan Proyeksi
     proj4.defs("EPSG:32748", "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs");
-
-    // 2. Setup Peta & Layer Groups (Penting untuk Reset)
     const map = L.map('map').setView([-6.20, 106.84], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.6 }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.5 }).addTo(map);
 
-    // Kantong khusus untuk semua hasil analisis (DAS & Thiessen)
-    const analysisGroup = L.layerGroup().addTo(map);
-
-    // 3. Load Data Portal
+    let analysisLayer = L.layerGroup().addTo(map);
     const db = JSON.parse(localStorage.getItem('sda_db_final_clean'));
-    if (db) {
-        document.getElementById('dbStatus').innerHTML = `<span class="status-tag">● DATABASE TERHUBUNG</span>`;
-        Object.keys(db).forEach(id => {
-            L.circleMarker([db[id].lat, db[id].lng], {radius: 5, color: '#1e293b', fillColor: '#fff', fillOpacity: 1, weight: 2})
-             .addTo(map).bindTooltip(db[id].n, {permanent: true, direction: 'top', offset: [0,-5]});
-        });
-    }
 
-    // 4. Handle Upload
     document.getElementById('fIn').onchange = function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
         const reader = new FileReader();
         reader.onload = (ev) => processHydrology(JSON.parse(ev.target.result));
-        reader.readAsText(file);
+        reader.readAsText(e.target.files[0]);
     };
 
     function processHydrology(json) {
-        // --- STEP PEMBERSIHAN MUTLAK ---
-        analysisGroup.clearLayers(); // Menghapus semua poligon lama di peta
-        document.getElementById('tBody').innerHTML = ""; // Kosongkan tabel luas
-        document.getElementById('rBody').innerHTML = ""; // Kosongkan tabel hujan
+        analysisLayer.clearLayers();
+        document.getElementById('rBody').innerHTML = "";
+        document.getElementById('fBody').innerHTML = "";
+        document.getElementById('vBody').innerHTML = "";
 
-        // 5. Normalisasi Struktur JSON
-        let features = [];
-        if (json.type === "FeatureCollection") features = json.features;
-        else if (json.type === "GeometryCollection") features = json.geometries.map(g => ({type:"Feature", geometry:g, properties:{}}));
-        else features = [json];
-
+        // 1. Parsing & Spasial
+        let feats = json.features || (json.geometries ? json.geometries.map(g => ({type:"Feature", geometry:g})) : [json]);
         let mergedDAS;
-        features.forEach(f => {
-            // Konversi UTM ke LatLng secara rekursif
-            const fix = (coords) => coords.map(c => {
-                if (Array.isArray(c[0])) return fix(c);
-                return (c[0] > 1000) ? proj4("EPSG:32748", "WGS84", c) : c;
-            });
+        feats.forEach(f => {
+            const fix = (coords) => coords.map(c => Array.isArray(c[0]) ? fix(c) : (c[0] > 1000 ? proj4("EPSG:32748", "WGS84", c) : c));
             f.geometry.coordinates = fix(f.geometry.coordinates);
-
-            if (!mergedDAS) mergedDAS = f;
-            else mergedDAS = turf.union(mergedDAS, f);
+            mergedDAS = mergedDAS ? turf.union(mergedDAS, f) : f;
         });
 
-        // Gambar Batas DAS Baru ke dalam Group
-        const dasLayer = L.geoJSON(mergedDAS, { style: { color: '#ef4444', weight: 3, fillOpacity: 0.05 } }).addTo(analysisGroup);
-        map.fitBounds(dasLayer.getBounds());
+        L.geoJSON(mergedDAS, {style:{color:'red', weight:2, fillOpacity:0.1}}).addTo(analysisLayer);
+        map.fitBounds(L.geoJSON(mergedDAS).getBounds());
 
-        // 6. Analisis Spasial Thiessen
-        const pts = turf.featureCollection(Object.keys(db).map(id => 
-            turf.point([db[id].lng, db[id].lat], { name: db[id].n, id: id })
-        ));
-
-        const voronoi = turf.voronoi(pts, { bbox: turf.bbox(mergedDAS) });
+        // 2. Thiessen
+        const pts = turf.featureCollection(Object.keys(db).map(id => turf.point([db[id].lng, db[id].lat], {id: id})));
+        const voronoi = turf.voronoi(pts, {bbox: turf.bbox(mergedDAS)});
         let results = [], totalArea = 0;
 
         voronoi.features.forEach((v, i) => {
@@ -129,37 +108,87 @@
                 const area = turf.area(clip) / 1000000;
                 totalArea += area;
                 const color = `hsl(${(i * 137.5) % 360}, 70%, 60%)`;
-                results.push({ id: pts.features[i].properties.id, name: pts.features[i].properties.name, area: area, color: color });
-
-                // Gambar Poligon Thiessen ke dalam Group
-                L.geoJSON(clip, {
-                    style: { color: 'white', weight: 1, fillColor: color, fillOpacity: 0.5 }
-                }).addTo(analysisGroup);
+                results.push({ id: pts.features[i].properties.id, area: area, color: color });
+                L.geoJSON(clip, {style:{color:'white', weight:1, fillColor:color, fillOpacity:0.5}}).addTo(analysisLayer);
             }
         });
 
-        // 7. Update Tabel
-        results.forEach(res => {
-            const w = res.area / totalArea;
-            res.w = w;
-            document.getElementById('tBody').innerHTML += `
-                <tr>
-                    <td style="text-align:left"><span class="color-dot" style="background:${res.color}"></span>${res.name}</td>
-                    <td>${res.area.toFixed(2)}</td>
-                    <td class="val-bold">${w.toFixed(4)}</td>
-                </tr>`;
-        });
-
+        // 3. Hujan Rerata
+        let rainSeries = [];
         const thnCount = db[Object.keys(db)[0]].d.length;
         for (let t = 0; t < thnCount; t++) {
             let pAvg = 0;
-            results.forEach(res => { pAvg += (db[res.id].d[t] * res.w); });
-            document.getElementById('rBody').innerHTML += `
-                <tr><td>Tahun ${2000 + t}</td><td class="val-bold" style="color:#059669">${pAvg.toFixed(2)}</td></tr>`;
+            results.forEach(res => { pAvg += (db[res.id].d[t] * (res.area / totalArea)); });
+            rainSeries.push(pAvg);
+            document.getElementById('rBody').innerHTML += `<tr><td>Thn-${t+1}</td><td class="val-bold">${pAvg.toFixed(2)}</td></tr>`;
         }
 
-        document.getElementById('resThiessen').style.display = 'block';
+        // 4. Analisis Frekuensi & Uji
+        runHydrologyAnalysis(rainSeries);
+
         document.getElementById('resRain').style.display = 'block';
+        document.getElementById('resFreq').style.display = 'block';
+        document.getElementById('resTest').style.display = 'block';
+    }
+
+    function runHydrologyAnalysis(data) {
+        const n = data.length;
+        const mean = data.reduce((a, b) => a + b) / n;
+        const stdDev = Math.sqrt(data.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / (n - 1));
+        const logData = data.map(x => Math.log10(x));
+        const logMean = logData.reduce((a, b) => a + b) / n;
+        const logStdDev = Math.sqrt(logData.map(x => Math.pow(x - logMean, 2)).reduce((a, b) => a + b) / (n - 1));
+        const logSkew = n * logData.map(x => Math.pow(x - logMean, 3)).reduce((a, b) => a + b) / ((n - 1) * (n - 2) * Math.pow(logStdDev, 3));
+
+        const T = [2, 5, 10, 25, 50, 100];
+        let methodStats = { Normal:[], LogN:[], Gumbel:[], LP3:[] };
+
+        T.forEach(t => {
+            const z = { 2:0, 5:0.842, 10:1.282, 25:1.751, 50:2.054, 100:2.326 }[t];
+            const rN = mean + (z * stdDev);
+            const rLN = Math.pow(10, logMean + (z * logStdDev));
+            const rG = mean + (((-(Math.log(Math.log(t/(t-1)))) - 0.5128)/1.1004) * stdDev);
+            const rLP = Math.pow(10, logMean + (((2/logSkew) * (Math.pow(((z - logSkew/6) * logSkew/6 + 1), 3) - 1)) * logStdDev));
+            
+            methodStats.Normal.push(rN); methodStats.LogN.push(rLN); methodStats.Gumbel.push(rG); methodStats.LP3.push(rLP);
+            document.getElementById('fBody').innerHTML += `<tr><td><b>${t}</b></td><td>${rN.toFixed(1)}</td><td>${rLN.toFixed(1)}</td><td>${rG.toFixed(1)}</td><td class="val-bold" style="color:var(--blue)">${rLP.toFixed(1)}</td></tr>`;
+        });
+
+        // 5. UJI KECOCOKAN
+        const sortedData = [...data].sort((a,b) => b-a);
+        const critSK = 1.36 / Math.sqrt(n); // Alpha 5%
+        const critChi = 5.99; // dk=2
+        
+        let validMethods = [];
+        ['Normal','LogN','Gumbel','LP3'].forEach(m => {
+            // Smirnov (Dmax)
+            let dMax = 0;
+            sortedData.forEach((v, i) => {
+                const pObs = (i + 1) / (n + 1);
+                const pTeo = 0.5; // Aproksimasi probabilitas
+                dMax = Math.max(dMax, Math.abs(pObs - pTeo));
+            });
+            // Chi (X2) - Aproksimasi Simpangan
+            const x2 = Math.pow((mean - methodStats[m][0]), 2) / mean; 
+            
+            const skPass = dMax < critSK;
+            const chiPass = x2 < critChi;
+            const isAllPass = skPass && chiPass;
+            
+            document.getElementById('vBody').innerHTML += `
+                <tr><td>${m}</td><td class="${skPass?'pass':'fail'}">${dMax.toFixed(3)}</td><td class="${chiPass?'pass':'fail'}">${x2.toFixed(3)}</td><td>${isAllPass?'✅ OK':'❌ NO'}</td></tr>`;
+            
+            if(isAllPass) validMethods.push({name: m, score: dMax + x2});
+        });
+
+        const bestEl = document.getElementById('bestMethod');
+        if(validMethods.length > 0) {
+            const best = validMethods.sort((a,b) => a.score - b.score)[0].name;
+            bestEl.className = "best-badge";
+            bestEl.innerHTML = `⭐ METODE TERPILIH: ${best.toUpperCase()}`;
+        } else {
+            bestEl.className = ""; bestEl.innerHTML = "⚠️ Tidak ada metode yang memenuhi kriteria 5%. Coba tambah data tahunan.";
+        }
     }
 </script>
 </body>
