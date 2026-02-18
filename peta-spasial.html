@@ -1,0 +1,67 @@
+function calculateFrequency(dataHujan) {
+    const n = dataHujan.length;
+    if (n < 2) return; 
+
+    // --- 1. Statistik Parameter Dasar ---
+    const mean = dataHujan.reduce((a, b) => a + b) / n;
+    const stdDev = Math.sqrt(dataHujan.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / (n - 1));
+    
+    // --- 2. Statistik Parameter Log (Untuk Log-Normal & LP III) ---
+    const logData = dataHujan.map(x => Math.log10(x));
+    const logMean = logData.reduce((a, b) => a + b) / n;
+    const logStdDev = Math.sqrt(logData.map(x => Math.pow(x - logMean, 2)).reduce((a, b) => a + b) / (n - 1));
+    const logSkew = n * logData.map(x => Math.pow(x - logMean, 3)).reduce((a, b) => a + b) / ((n - 1) * (n - 2) * Math.pow(logStdDev, 3));
+
+    const T = [2, 5, 10, 25, 50, 100];
+    const freqBody = document.getElementById('freqBody');
+    freqBody.innerHTML = "";
+
+    T.forEach(t => {
+        // A. METODE NORMAL (Kt didapat dari Z-table standar)
+        const ktNormal = getZScore(t); 
+        const rainNormal = mean + (ktNormal * stdDev);
+
+        // B. METODE LOG-NORMAL (Sama dengan Normal tapi dalam ruang Log)
+        const rainLogNormal = Math.pow(10, logMean + (ktNormal * logStdDev));
+
+        // C. METODE GUMBEL
+        const ktGumbel = (-(Math.log(Math.log(t / (t - 1)))) - 0.5128) / 1.1004; // Aproksimasi Yn/Sn
+        const rainGumbel = mean + (ktGumbel * stdDev);
+
+        // D. METODE LOG PEARSON III
+        const ktLP3 = calculateKLP3(t, logSkew);
+        const rainLP3 = Math.pow(10, logMean + (ktLP3 * logStdDev));
+
+        freqBody.innerHTML += `
+            <tr>
+                <td><b>${t}</b></td>
+                <td>${rainNormal.toFixed(1)}</td>
+                <td>${rainLogNormal.toFixed(1)}</td>
+                <td>${rainGumbel.toFixed(1)}</td>
+                <td class="val-bold" style="color:#2563eb">${rainLP3.toFixed(1)}</td>
+            </tr>`;
+    });
+    document.getElementById('resFrequency').style.display = 'block';
+}
+
+// Helper Z-Score untuk Distribusi Normal & Log-Normal
+function getZScore(T) {
+    const p = 1 / T;
+    const probability = 1 - p;
+    // Nilai pendekatan Z-Score untuk kala ulang umum
+    if (T == 2) return 0;
+    if (T == 5) return 0.842;
+    if (T == 10) return 1.282;
+    if (T == 25) return 1.751;
+    if (T == 50) return 2.054;
+    if (T == 100) return 2.326;
+    return 0;
+}
+
+// Helper Faktor K Log Pearson III (Aproksimasi Kitajen-Chow)
+function calculateKLP3(T, Cs) {
+    const ktNormal = getZScore(T);
+    // Rumus pendekatan faktor K berdasarkan kemiringan (Skewness)
+    const k = (2 / Cs) * (Math.pow(((ktNormal - Cs / 6) * Cs / 6 + 1), 3) - 1);
+    return k;
+}
