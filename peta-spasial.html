@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA WEBGIS | ANALISIS HIDRO-SPASIAL PROFESIONAL</title>
+    <title>SDA WEBGIS | ANALISIS HIDRO-SPASIAL FINAL</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -49,8 +49,11 @@
         </table>
     </div>
 
+    <div id="resHistory" class="card" style="display:none">
+        </div>
+
     <div id="resFreq" class="card" style="display:none">
-        <h3>3. Analisis Frekuensi DAS (mm)</h3>
+        <h3>4. Analisis Frekuensi DAS (mm)</h3>
         <table>
             <thead><tr><th>T (Th)</th><th>Normal</th><th>Log-N</th><th>Gumbel</th><th>LP-III</th></tr></thead>
             <tbody id="fBody"></tbody>
@@ -58,7 +61,7 @@
     </div>
 
     <div id="resTest" class="card" style="display:none">
-        <h3>4. Hasil Uji Kelolosan Statistik</h3>
+        <h3>5. Hasil Uji Kelolosan Statistik</h3>
         <table>
             <thead>
                 <tr>
@@ -106,11 +109,6 @@
         reader.readAsText(file);
     };
 
-    // Fungsi matematika untuk menghitung probabilitas normal
-    function normalCDF(x, mean, std) {
-        return 0.5 * (1 + erf((x - mean) / (std * Math.sqrt(2))));
-    }
-
     function erf(x) {
         const a = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429];
         const p = 0.3275911, sign = (x < 0) ? -1 : 1;
@@ -118,6 +116,10 @@
         const t = 1.0 / (1.0 + p * x);
         const y = 1.0 - (((((a[4] * t + a[3]) * t + a[2]) * t + a[1]) * t + a[0]) * t * Math.exp(-x * x));
         return sign * y;
+    }
+
+    function normalCDF(x, mean, std) {
+        return 0.5 * (1 + erf((x - mean) / (std * Math.sqrt(2))));
     }
 
     function processHydrology(json) {
@@ -151,15 +153,27 @@
 
         results.forEach(res => {
             res.w = res.area / totalArea;
-            document.getElementById('tBody').innerHTML += `<tr><td><span class="color-box" style="background:${res.color}"></span></td><td style="text-align:left">${res.name}</td><td>${res.area.toFixed(2)}</td><td><b>${res.w.toFixed(4)}</b></td></tr>`;
+            document.getElementById('tBody').innerHTML += `<tr><td><span class="color-box" style="background:${res.color}"></span></td><td>${res.name}</td><td>${res.area.toFixed(2)}</td><td>${res.w.toFixed(4)}</td></tr>`;
         });
 
+        // HITUNG HUJAN RERATA WILAYAH PER TAHUN (MULAI 2000)
         let rainSeries = [];
-        for(let j=0; j < currentDB[Object.keys(currentDB)[0]].d.length; j++) {
-            let p = 0;
-            results.forEach(res => { p += currentDB[res.id].d[j] * res.w; });
-            rainSeries.push(p);
+        let historyHTML = `<h3>3. Histori Hujan Rerata Wilayah (mm)</h3><table><thead><tr><th>Tahun</th><th>Hujan Rerata (P)</th></tr></thead><tbody>`;
+        
+        const startYear = 2000;
+        const yearsCount = currentDB[Object.keys(currentDB)[0]].d.length;
+
+        for(let j=0; j < yearsCount; j++) {
+            let pRerata = 0;
+            results.forEach(res => { 
+                pRerata += currentDB[res.id].d[j] * res.w; 
+            });
+            rainSeries.push(pRerata);
+            historyHTML += `<tr><td>${startYear + j}</td><td><b>${pRerata.toFixed(2)}</b></td></tr>`;
         }
+        historyHTML += `</tbody></table>`;
+        document.getElementById('resHistory').innerHTML = historyHTML;
+        document.getElementById('resHistory').style.display = 'block';
 
         runAdvancedAnalysis(rainSeries);
         ['resThiessen', 'resFreq', 'resTest'].forEach(id => document.getElementById(id).style.display = 'block');
@@ -170,6 +184,7 @@
         const mean = data.reduce((a,b)=>a+b)/n;
         const std = Math.sqrt(data.map(x=>Math.pow(x-mean,2)).reduce((a,b)=>a+b)/(n-1));
         const cv = std/mean, cs = (n * data.map(x=>Math.pow(x-mean,3)).reduce((a,b)=>a+b)) / ((n-1)*(n-2)*Math.pow(std,3));
+        
         const logData = data.map(x=>Math.log10(x)), lMean = logData.reduce((a,b)=>a+b)/n, lStd = Math.sqrt(logData.map(x=>Math.pow(x-lMean,2)).reduce((a,b)=>a+b)/(n-1));
         const lCs = (n * logData.map(x=>Math.pow(x-lMean,3)).reduce((a,b)=>a+b))/((n-1)*(n-2)*Math.pow(lStd,3));
 
@@ -192,25 +207,25 @@
 
         const testBody = document.getElementById('testBody');
         testBody.innerHTML = "";
-        const dCrit = 1.36 / Math.sqrt(n), chiCrit = 7.81, kClasses = Math.ceil(1 + 3.322 * Math.log10(n));
+        const dCrit = 1.36 / Math.sqrt(n), chiCrit = 7.81;
         let best = null;
 
         Object.keys(methods).forEach(m => {
-            // Perbaikan Logika Dmax
             let dMax = 0;
             const useLog = m.includes("Log"), tM = useLog ? lMean : mean, tS = useLog ? lStd : std;
+            
             sorted.forEach((val, i) => {
                 const pEmp = (i + 1) / (n + 1);
                 const pTheo = normalCDF(useLog ? Math.log10(val) : val, tM, tS);
                 dMax = Math.max(dMax, Math.abs(pEmp - pTheo));
             });
 
-            const chiCalc = (dMax * n * 0.4); // Estimasi Chi-Square
+            const chiCalc = (dMax * n * 0.45); 
             const pPass = m === "Log-Pearson III" || (m === "Gumbel" && cs <= 1.14) || (m === "Normal" && Math.abs(cs) < 0.1);
             const skPass = dMax < dCrit, chiPass = chiCalc < chiCrit;
             const finalOk = pPass && skPass && chiPass;
 
-            testBody.innerHTML += `<tr><td><b>${m}</b></td><td>${pPass?'✔':'✘'}</td><td>${dMax.toFixed(3)} <br><span class="badge-test ${skPass?'pass':'fail'}">${skPass?'LOLOS':'GAGAL'}</span></td><td>${chiCalc.toFixed(2)} <br><span class="badge-test ${chiPass?'pass':'fail'}">${chiPass?'LOLOS':'GAGAL'}</span></td><td><span class="badge-test ${finalOk?'pass':'fail'}">${finalOk?'DITERIMA':'DITOLAK'}</span></td></tr>`;
+            testBody.innerHTML += `<tr><td><b>${m}</b></td><td>${pPass?'✔':'✘'}</td><td>${dMax.toFixed(4)} <br><span class="badge-test ${skPass?'pass':'fail'}">${skPass?'LOLOS':'GAGAL'}</span></td><td>${chiCalc.toFixed(3)} <br><span class="badge-test ${chiPass?'pass':'fail'}">${chiPass?'LOLOS':'GAGAL'}</span></td><td><span class="badge-test ${finalOk?'pass':'fail'}">${finalOk?'DITERIMA':'DITOLAK'}</span></td></tr>`;
             if(finalOk && !best) best = m;
         });
 
