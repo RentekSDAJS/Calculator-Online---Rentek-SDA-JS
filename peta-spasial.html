@@ -34,25 +34,29 @@
         <button class="upload-btn" onclick="document.getElementById('fIn').value=''; document.getElementById('fIn').click()">PILIH FILE DAS</button>
         <input type="file" id="fIn" style="display:none" accept=".json">
     </div>
-
-    <div id="resThiessen" class="card" style="display:none">
-        <h3>2. KOEFISIEN THIESSEN</h3>
-        <table><thead><tr><th>Stasiun</th><th>Luas (km²)</th><th>W (Bobot)</th></tr></thead><tbody id="tBody"></tbody></table>
-    </div>
-
     <div id="resRain" class="card" style="display:none">
-        <h3>3. HUJAN RERATA DAS (mm)</h3>
+        <h3>2. HUJAN RERATA DAS (mm)</h3>
         <table><thead><tr><th>Tahun</th><th>P-Rerata</th></tr></thead><tbody id="rBody"></tbody></table>
     </div>
-
     <div id="resFreq" class="card" style="display:none">
-        <h3>4. HUJAN RANCANGAN (Kala Ulang)</h3>
+        <h3>3. HUJAN RANCANGAN (Kala Ulang)</h3>
         <table><thead><tr><th>T (Th)</th><th>Normal</th><th>Log-N</th><th>Gumbel</th><th>LP-III</th></tr></thead><tbody id="fBody"></tbody></table>
     </div>
-
     <div id="resTest" class="card" style="display:none">
-        <h3>5. UJI KECOCOKAN (Status Multi-Level)</h3>
-        <table><thead><tr><th>Metode</th><th>Δ Max (S-K)</th><th>χ² (Chi)</th><th>Hasil</th></tr></thead><tbody id="vBody"></tbody></table>
+        <h3>4. UJI KECOCOKAN (Multi-Level)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metode</th>
+                    <th>Δ Max (S-K)</th>
+                    <th>Status S-K</th>
+                    <th>χ² (Chi)</th>
+                    <th>Status Chi</th>
+                    <th>Hasil</th>
+                </tr>
+            </thead>
+            <tbody id="vBody"></tbody>
+        </table>
         <div id="bestMethod"></div>
     </div>
 </div>
@@ -73,7 +77,6 @@
 
     function processHydrology(json) {
         analysisLayer.clearLayers();
-        document.getElementById('tBody').innerHTML = "";
         document.getElementById('rBody').innerHTML = "";
         document.getElementById('fBody').innerHTML = "";
         document.getElementById('vBody').innerHTML = "";
@@ -91,38 +94,28 @@
 
         const pts = turf.featureCollection(Object.keys(db).map(id => turf.point([db[id].lng, db[id].lat], {id: id})));
         const voronoi = turf.voronoi(pts, {bbox: turf.bbox(mergedDAS)});
-        let thiessenRes = [], totalArea = 0;
+        let results = [], totalArea = 0;
 
         voronoi.features.forEach((v, i) => {
             const clip = turf.intersect(v, mergedDAS);
             if (clip) {
                 const area = turf.area(clip) / 1000000;
                 totalArea += area;
-                const id = pts.features[i].properties.id;
-                thiessenRes.push({ id, area });
-                const color = `hsl(${(i * 137.5) % 360}, 70%, 60%)`;
-                L.geoJSON(clip, {style:{color:'white', weight:1, fillColor:color, fillOpacity:0.4}}).addTo(analysisLayer);
+                results.push({ id: pts.features[i].properties.id, area: area });
             }
         });
 
         let rainSeries = [];
-        thiessenRes.forEach(res => {
-            const w = res.area / totalArea;
-            document.getElementById('tBody').innerHTML += `<tr><td>${res.id}</td><td>${res.area.toFixed(2)}</td><td>${w.toFixed(4)}</td></tr>`;
-            res.w = w;
-        });
-
         const thnCount = db[Object.keys(db)[0]].d.length;
         for (let t = 0; t < thnCount; t++) {
             let pAvg = 0;
-            thiessenRes.forEach(res => { pAvg += (db[res.id].d[t] * res.w); });
+            results.forEach(res => { pAvg += (db[res.id].d[t] * (res.area / totalArea)); });
             rainSeries.push(pAvg);
-            document.getElementById('rBody').innerHTML += `<tr><td>Thn-${t+1}</td><td>${pAvg.toFixed(2)}</td></tr>`;
+            document.getElementById('rBody').innerHTML += `<tr><td>200${t}</td><td>${pAvg.toFixed(2)}</td></tr>`;
         }
 
         runFrequencyAnalysis(rainSeries);
         
-        document.getElementById('resThiessen').style.display = 'block';
         document.getElementById('resRain').style.display = 'block';
         document.getElementById('resFreq').style.display = 'block';
         document.getElementById('resTest').style.display = 'block';
@@ -154,8 +147,9 @@
         const sortedData = [...data].sort((a,b) => b-a);
         const critSK5 = 1.36 / Math.sqrt(n); 
         const critSK1 = 1.63 / Math.sqrt(n);
-        const critChi5 = 5.99;
-        const critChi1 = 9.21;
+        const critChi5 = 5.991;
+        const critChi1 = 9.210;
+
         let validMethods = [];
 
         ['Normal','LogN','Gumbel','LP3'].forEach(m => {
@@ -166,26 +160,43 @@
                 dMax = Math.max(dMax, Math.abs(pObs - pTeo));
             });
             const x2 = Math.pow((mean - mStats[m][0]), 2) / mean; 
+
+            // Penentuan Status S-K
+            let skLabel = "Ditolak";
+            let skClass = "fail";
+            if (dMax < critSK5) { skLabel = "Diterima 5%"; skClass = "pass-5"; }
+            else if (dMax < critSK1) { skLabel = "Diterima 1%"; skClass = "pass-1"; }
+
+            // Penentuan Status Chi
+            let chiLabel = "Ditolak";
+            let chiClass = "fail";
+            if (x2 < critChi5) { chiLabel = "Diterima 5%"; chiClass = "pass-5"; }
+            else if (x2 < critChi1) { chiLabel = "Diterima 1%"; chiClass = "pass-1"; }
+
+            const isAccepted = skLabel !== "Ditolak" && chiLabel !== "Ditolak";
+
+            document.getElementById('vBody').innerHTML += `
+                <tr>
+                    <td><b>${m}</b></td>
+                    <td>${dMax.toFixed(3)}</td>
+                    <td class="${skClass}">${skLabel}</td>
+                    <td>${x2.toFixed(3)}</td>
+                    <td class="${chiClass}">${chiLabel}</td>
+                    <td>${isAccepted ? '✅' : '❌'}</td>
+                </tr>`;
             
-            // Status SK
-            let skRes = dMax < critSK5 ? "5%" : (dMax < critSK1 ? "1%" : "FAIL");
-            // Status Chi
-            let chiRes = x2 < critChi5 ? "5%" : (x2 < critChi1 ? "1%" : "FAIL");
-
-            const ok = skRes !== "FAIL" && chiRes !== "FAIL";
-            const cls = skRes === "5%" ? "pass-5" : (skRes === "1%" ? "pass-1" : "fail");
-
-            document.getElementById('vBody').innerHTML += `<tr><td>${m}</td><td class="${cls}">${dMax.toFixed(3)} (${skRes})</td><td class="${cls}">${x2.toFixed(3)} (${chiRes})</td><td>${ok?'✅':'❌'}</td></tr>`;
-            if(ok) validMethods.push({name: m, score: dMax + x2, level: skRes});
+            if(isAccepted) validMethods.push({name: m, score: dMax + x2, level: skLabel});
         });
 
         const bestEl = document.getElementById('bestMethod');
         if(validMethods.length > 0) {
             const best = validMethods.sort((a,b) => a.score - b.score)[0];
             bestEl.className = "best-badge";
-            bestEl.innerHTML = `HASIL ANALISIS: METODE ${best.name.toUpperCase()} (DITERIMA ${best.level})`;
+            bestEl.style.background = best.level.includes("5%") ? "var(--green)" : "var(--orange)";
+            bestEl.innerHTML = `HASIL ANALISIS: METODE ${best.name.toUpperCase()} (${best.level})`;
         } else {
-            bestEl.innerHTML = "<small style='color:red'>⚠️ Data tidak lolos uji 5% & 1%. Disarankan tambah data tahunan atau gunakan LP-III.</small>";
+            bestEl.className = "";
+            bestEl.innerHTML = "<small style='color:var(--red)'>⚠️ Data tidak lolos uji. Gunakan LP-III sesuai standar PU.</small>";
         }
     }
 </script>
