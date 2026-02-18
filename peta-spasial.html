@@ -11,26 +11,13 @@
     
     <style>
         :root { --main: #1e293b; --accent: #f59e0b; --green: #059669; --orange: #ea580c; --red: #dc2626; --blue: #2563eb; }
-        body { margin: 0; display: flex; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; height: 100vh; background: #f1f5f9; }
+        body { margin: 0; display: flex; font-family: 'Segoe UI', sans-serif; height: 100vh; background: #f1f5f9; }
         
         #map { flex: 2; z-index: 1; }
-        
-        #panel { 
-            flex: 1; 
-            padding: 25px; 
-            background: white; 
-            overflow-y: auto; 
-            box-shadow: -5px 0 15px rgba(0,0,0,0.1); 
-            z-index: 2; 
-            border-left: 5px solid var(--main); 
-        }
+        #panel { flex: 1; padding: 25px; background: white; overflow-y: auto; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 2; border-left: 5px solid var(--main); }
         
         .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
-        .upload-btn { 
-            background: var(--main); color: white; padding: 12px; width: 100%; 
-            border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; 
-        }
-        .upload-btn:hover { background: #334155; }
+        .upload-btn { background: var(--main); color: white; padding: 12px; width: 100%; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
         
         h2 { margin-top:0; color:var(--main); font-size: 1.5rem; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
         h3 { font-size: 11px; text-transform: uppercase; color: #64748b; margin-top: 0; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 10px; }
@@ -46,6 +33,29 @@
         .color-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; }
         .val-bold { font-weight: 800; color: var(--main); }
         .best-badge { background: var(--green); color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 12px; margin-top: 10px; }
+
+        /* Label Stasiun Style */
+        .leaflet-tooltip.station-label {
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-weight: 800;
+            color: #1e293b;
+            text-shadow: 2px 2px 0px white, -2px -2px 0px white, 2px -2px 0px white, -2px 2px 0px white;
+            font-size: 10px;
+            transition: all 0.3s ease;
+        }
+
+        /* Legenda Style */
+        .info.legend {
+            padding: 10px;
+            font: 12px Arial, sans-serif;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            line-height: 18px;
+        }
+        .legend i { width: 14px; height: 14px; float: left; margin-right: 8px; border-radius: 2px; }
     </style>
 </head>
 <body>
@@ -54,14 +64,12 @@
 
 <div id="panel">
     <h2>HYDRO-SPATIAL ANALYTICS</h2>
-    
     <div id="dbStatus"></div>
 
     <div class="card">
-        <h3>1. Input Area DAS (GeoJSON)</h3>
+        <h3>1. Input Area DAS (JSON)</h3>
         <button class="upload-btn" onclick="document.getElementById('fIn').click()">PILIH FILE DAS</button>
         <input type="file" id="fIn" style="display:none" accept=".json,.geojson">
-        <p style="font-size: 10px; color: #64748b; margin-top: 8px;">*Gunakan koordinat WGS84 atau UTM 48S</p>
     </div>
 
     <div id="resThiessen" class="card" style="display:none">
@@ -97,52 +105,45 @@
 </div>
 
 <script>
-    // Konfigurasi Proyeksi UTM 48S
     proj4.defs("EPSG:32748", "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs");
 
     const map = L.map('map').setView([-6.20, 106.84], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-        opacity: 0.7,
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.7 }).addTo(map);
 
     let dasLayer = null;
     let analysisLayer = L.layerGroup().addTo(map);
     let stMarkers = L.layerGroup().addTo(map);
 
-    // Fungsi Load Database dari LocalStorage
     function loadDB() {
         const rawData = localStorage.getItem('sda_db_final_clean');
         const statusEl = document.getElementById('dbStatus');
         
         if (rawData) {
             const db = JSON.parse(rawData);
-            statusEl.innerHTML = `<span class="status-tag ok">● DATABASE TERHUBUNG (${Object.keys(db).length} STASIUN)</span>`;
-            
+            statusEl.innerHTML = `<span class="status-tag ok">● DATABASE TERHUBUNG</span>`;
             stMarkers.clearLayers();
             Object.keys(db).forEach(id => {
-                L.circleMarker([db[id].lat, db[id].lng], {
-                    radius: 6, color: '#1e293b', fillColor: '#f59e0b', fillOpacity: 1, weight: 2
-                }).addTo(stMarkers).bindTooltip(db[id].n, { permanent: false, direction: 'top' });
+                const st = db[id];
+                const marker = L.circleMarker([st.lat, st.lng], {
+                    radius: 7, color: '#1e293b', fillColor: '#f59e0b', fillOpacity: 1, weight: 2
+                }).addTo(stMarkers);
+
+                marker.bindTooltip(st.n, { permanent: true, direction: 'top', offset: [0, -8], className: 'station-label' });
+                marker.bindPopup(`<strong>Stasiun ${st.n}</strong><br>LAT: ${st.lat}<br>LNG: ${st.lng}`);
             });
             return db;
         } else {
-            statusEl.innerHTML = `<span class="status-tag err">● DATABASE TIDAK DITEMUKAN (Buka data-hujan.html & klik Sinkronkan)</span>`;
+            statusEl.innerHTML = `<span class="status-tag err">● DATABASE TIDAK DITEMUKAN</span>`;
             return null;
         }
     }
 
     let currentDB = loadDB();
-
-    // Re-load jika user pindah tab atau melakukan perubahan di file sebelah
     window.onfocus = () => { currentDB = loadDB(); };
 
     document.getElementById('fIn').onchange = function(e) {
         const file = e.target.files[0];
-        if (!file || !currentDB) {
-            if(!currentDB) alert("Database kosong! Mohon sinkronkan data stasiun dulu.");
-            return;
-        }
+        if (!file || !currentDB) return;
         const reader = new FileReader();
         reader.onload = (ev) => processHydrology(JSON.parse(ev.target.result));
         reader.readAsText(file);
@@ -155,7 +156,6 @@
 
         let features = json.features || (json.geometries ? json.geometries.map(g => ({type:"Feature", geometry:g, properties:{}})) : [json]);
 
-        // Perbaikan Koordinat (Otomatis deteksi UTM)
         let mergedDAS;
         features.forEach(f => {
             const fix = (coords) => coords.map(c => {
@@ -170,7 +170,6 @@
         dasLayer = L.geoJSON(mergedDAS, { style: { color: '#dc2626', weight: 3, fillOpacity: 0 } }).addTo(map);
         map.fitBounds(dasLayer.getBounds());
 
-        // Buat Titik Voronoi dari Database
         const pts = turf.featureCollection(Object.keys(currentDB).map(id => 
             turf.point([currentDB[id].lng, currentDB[id].lat], { name: currentDB[id].n, id: id })
         ));
@@ -189,26 +188,36 @@
             }
         });
 
-        // 1. Tabel Thiessen
-        results.forEach(res => {
-            res.w = res.area / totalArea;
-            document.getElementById('tBody').innerHTML += `
-                <tr><td style="text-align:left"><span class="color-dot" style="background:${res.color}"></span>${res.name}</td>
-                <td>${res.area.toFixed(2)}</td><td class="val-bold">${res.w.toFixed(4)}</td></tr>`;
+        // Update UI Markers (Active/Inactive)
+        const activeIds = results.map(r => r.id);
+        stMarkers.eachLayer(marker => {
+            const latlng = marker.getLatLng();
+            const stId = Object.keys(currentDB).find(k => currentDB[k].lat === latlng.lat && currentDB[k].lng === latlng.lng);
+            const tooltip = marker.getTooltip() ? marker.getTooltip().getElement() : null;
+
+            if (activeIds.includes(stId)) {
+                marker.setStyle({ fillColor: '#059669', radius: 8, weight: 3, color: '#fff' });
+                if(tooltip) { tooltip.style.color = '#059669'; tooltip.style.fontSize = '12px'; tooltip.style.opacity = '1'; }
+            } else {
+                marker.setStyle({ fillColor: '#cbd5e1', radius: 5, weight: 1, color: '#94a3b8' });
+                if(tooltip) { tooltip.style.color = '#94a3b8'; tooltip.style.fontSize = '9px'; tooltip.style.opacity = '0.6'; }
+            }
         });
 
-        // 2. Tabel Hujan Rerata
+        results.forEach(res => {
+            res.w = res.area / totalArea;
+            document.getElementById('tBody').innerHTML += `<tr><td style="text-align:left"><span class="color-dot" style="background:${res.color}"></span>${res.name}</td><td>${res.area.toFixed(2)}</td><td class="val-bold">${res.w.toFixed(4)}</td></tr>`;
+        });
+
         let rainSeries = [];
         const thnCount = currentDB[Object.keys(currentDB)[0]].d.length;
         for (let t = 0; t < thnCount; t++) {
             let pAvg = 0;
             results.forEach(res => { pAvg += (currentDB[res.id].d[t] * res.w); });
             rainSeries.push(pAvg);
-            document.getElementById('rBody').innerHTML += `
-                <tr><td>Tahun ${2000 + t}</td><td class="val-bold" style="color:var(--green)">${pAvg.toFixed(2)}</td></tr>`;
+            document.getElementById('rBody').innerHTML += `<tr><td>Tahun ${2000 + t}</td><td class="val-bold" style="color:var(--green)">${pAvg.toFixed(2)}</td></tr>`;
         }
 
-        // 3. Analisis Frekuensi & Tampilan
         runFrequency(rainSeries);
         ['resThiessen', 'resRain', 'resFreq'].forEach(id => document.getElementById(id).style.display = 'block');
     }
@@ -217,7 +226,6 @@
         const n = data.length;
         const mean = data.reduce((a, b) => a + b) / n;
         const stdDev = Math.sqrt(data.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / (n - 1));
-        
         const logData = data.map(x => Math.log10(x));
         const logMean = logData.reduce((a, b) => a + b) / n;
         const logStdDev = Math.sqrt(logData.map(x => Math.pow(x - logMean, 2)).reduce((a, b) => a + b) / (n - 1));
@@ -225,22 +233,32 @@
 
         const T = [2, 5, 10, 25, 50, 100];
         const fBody = document.getElementById('fBody');
-        
         T.forEach(t => {
-            const ktNorm = { 2:0, 5:0.842, 10:1.282, 25:1.751, 50:2.054, 100:2.326 }[t];
-            const rN = mean + (ktNorm * stdDev);
-            const rLN = Math.pow(10, logMean + (ktNorm * logStdDev));
+            const kt = { 2:0, 5:0.842, 10:1.282, 25:1.751, 50:2.054, 100:2.326 }[t];
+            const rN = mean + (kt * stdDev);
+            const rLN = Math.pow(10, logMean + (kt * logStdDev));
             const rG = mean + (((-(Math.log(Math.log(t/(t-1)))) - 0.5128)/1.1004) * stdDev);
-            
-            // Log Pearson III (Aproksimasi Kitajen-Chow)
-            const kLP = (2/logSkew) * (Math.pow(((ktNorm - logSkew/6) * logSkew/6 + 1), 3) - 1);
+            const kLP = (2/logSkew) * (Math.pow(((kt - logSkew/6) * logSkew/6 + 1), 3) - 1);
             const rLP = Math.pow(10, logMean + (kLP * logStdDev));
-
             fBody.innerHTML += `<tr><td><b>${t} Th</b></td><td>${rN.toFixed(1)}</td><td>${rLN.toFixed(1)}</td><td>${rG.toFixed(1)}</td><td class="val-bold" style="color:var(--blue)">${rLP.toFixed(1)}</td></tr>`;
         });
-        
         document.getElementById('bestMethod').innerHTML = `<div class="best-badge">STANDAR PU: LOG PEARSON III (LP-III)</div>`;
     }
+
+    // Legenda
+    const legend = L.control({position: 'bottomright'});
+    legend.onAdd = function () {
+        const div = L.DomUtil.create('div', 'info legend');
+        div.innerHTML = `
+            <h4 style="margin:0 0 8px; font-size:12px; border-bottom:1px solid #ddd">Legenda</h4>
+            <div style="margin-bottom:4px"><i style="background:#dc2626; border:1px solid #dc2626"></i> Batas DAS</div>
+            <div style="margin-bottom:4px"><i style="background:#059669; border-radius:50%; width:10px; height:10px; margin-top:4px"></i> Stasiun Aktif</div>
+            <div style="margin-bottom:4px"><i style="background:#cbd5e1; border-radius:50%; width:10px; height:10px; margin-top:4px"></i> Stasiun Luar</div>
+            <div style="margin-bottom:4px"><i style="background:rgba(0,0,0,0.1); border:1px dashed #666"></i> Poligon Thiessen</div>
+        `;
+        return div;
+    };
+    legend.addTo(map);
 </script>
 </body>
 </html>
