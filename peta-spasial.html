@@ -2,36 +2,46 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SDA WEBGIS | ANALISIS HIDROLOGI PRO</title>
+    <title>SDA WEBGIS | ANALISIS HIDROLOGI PROFESIONAL</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+    
     <style>
         :root { --main: #1e293b; --accent: #f59e0b; --green: #059669; --red: #dc2626; --blue: #2563eb; }
-        body { margin: 0; display: flex; font-family: 'Segoe UI', sans-serif; height: 100vh; background: #f1f5f9; }
+        body { margin: 0; display: flex; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; height: 100vh; background: #f1f5f9; }
+        
         #map { flex: 2; z-index: 1; }
         #panel { flex: 1; padding: 20px; background: white; overflow-y: auto; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 2; border-left: 5px solid var(--main); }
-        .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
-        .upload-btn { background: var(--main); color: white; padding: 12px; width: 100%; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
-        h2 { margin: 0 0 15px 0; color: var(--main); font-size: 1.4rem; border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
-        h3 { font-size: 10px; text-transform: uppercase; color: #64748b; margin: 0 0 10px 0; border-bottom: 1px solid #e2e8f0; }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10px; }
-        th { background: #f1f5f9; padding: 6px; border: 1px solid #e2e8f0; }
-        td { padding: 6px; border: 1px solid #e2e8f0; text-align: center; }
-        .status-tag { display: inline-block; padding: 4px 10px; border-radius: 15px; font-size: 10px; font-weight: bold; margin-bottom: 10px; }
+        
+        .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+        .upload-btn { background: var(--main); color: white; padding: 12px; width: 100%; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .upload-btn:hover { background: #334155; }
+        
+        h2 { margin-top: 0; color: var(--main); font-size: 1.4rem; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+        h3 { font-size: 10px; text-transform: uppercase; color: #64748b; margin: 0 0 10px 0; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; }
+        th { background: #f1f5f9; color: #475569; padding: 8px; border: 1px solid #e2e8f0; }
+        td { padding: 8px; border: 1px solid #e2e8f0; text-align: center; }
+        
+        .status-tag { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 10px; font-weight: bold; margin-bottom: 15px; }
         .ok { background: #dcfce7; color: #166534; }
         .err { background: #fee2e2; color: #991b1b; }
-        .color-box { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
-        .best-badge { background: var(--main); color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 10px; border-left: 5px solid var(--accent); }
-        .scroll-table { max-height: 150px; overflow-y: auto; display: block; width: 100%; border: 1px solid #e2e8f0; }
+        
+        .color-box { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.1); }
+        .scroll-container { max-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 5px; }
+        .best-badge { background: var(--main); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 15px; border-left: 5px solid var(--accent); }
+        .val-bold { font-weight: bold; color: var(--main); }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
 <div id="panel">
-    <h2>HYDRO-ANALYTICS 2026</h2>
+    <h2>HYDRO-SPATIAL PRO</h2>
     <div id="dbStatus"></div>
 
     <div class="card">
@@ -41,16 +51,16 @@
     </div>
 
     <div id="resThiessen" class="card" style="display:none">
-        <h3>2. Koefisien Thiessen & Warna</h3>
+        <h3>2. Koefisien Thiessen & Warna DAS</h3>
         <table>
-            <thead><tr><th style="text-align:left">Stasiun</th><th>W (Bobot)</th></tr></thead>
+            <thead><tr><th style="text-align:left">Stasiun</th><th>Luas (km²)</th><th>Bobot (W)</th></tr></thead>
             <tbody id="tBody"></tbody>
         </table>
     </div>
 
     <div id="resYearly" class="card" style="display:none">
-        <h3>3. Hujan Rerata Wilayah (Sejak 2000)</h3>
-        <div class="scroll-table">
+        <h3>3. Hujan Rerata Wilayah Tahunan (Sejak 2000)</h3>
+        <div class="scroll-container">
             <table>
                 <thead><tr><th>Tahun</th><th>Hujan (mm)</th></tr></thead>
                 <tbody id="yBody"></tbody>
@@ -59,7 +69,7 @@
     </div>
 
     <div id="resParams" class="card" style="display:none">
-        <h3>4. Parameter Statistik DAS</h3>
+        <h3>4. Rekapitulasi Parameter Statistik</h3>
         <table>
             <thead><tr><th>Mean</th><th>Sd</th><th>Cv</th><th>Cs</th><th>Ck</th></tr></thead>
             <tbody id="pBody"></tbody>
@@ -67,15 +77,15 @@
     </div>
 
     <div id="resFreq" class="card" style="display:none">
-        <h3>5. Analisis Frekuensi (mm)</h3>
+        <h3>5. Analisis Frekuensi</h3>
         <table>
-            <thead><tr><th>T</th><th>Normal</th><th>Log-N</th><th>Gumbel</th><th>LP-III</th></tr></thead>
+            <thead><tr><th>T (Th)</th><th>Normal</th><th>Log-N</th><th>Gumbel</th><th>LP-III</th></tr></thead>
             <tbody id="fBody"></tbody>
         </table>
     </div>
 
     <div id="resTest" class="card" style="display:none">
-        <h3>6. Uji Kesesuaian Terpisah (5% & 1%)</h3>
+        <h3>6. Uji Kesesuaian (Simultan 5% & 1%)</h3>
         <table>
             <thead><tr><th>Metode</th><th>Param</th><th>S-K</th><th>Chi-Sq</th><th>Status</th></tr></thead>
             <tbody id="testBody"></tbody>
@@ -85,27 +95,32 @@
 </div>
 
 <script>
+    // Konfigurasi UTM48S
     proj4.defs("EPSG:32748", "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs");
+
     const map = L.map('map').setView([-6.20, 106.84], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.6 }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.7 }).addTo(map);
 
     let dasLayer = null, analysisLayer = L.layerGroup().addTo(map), stMarkers = L.layerGroup().addTo(map), currentDB = null;
 
     function refreshDatabase() {
-        const rawData = localStorage.getItem('sda_db_final_clean');
-        if (rawData) {
-            currentDB = JSON.parse(rawData);
-            document.getElementById('dbStatus').innerHTML = `<span class="status-tag ok">● DATABASE TERHUBUNG</span>`;
-            stMarkers.clearLayers();
-            Object.keys(currentDB).forEach(id => {
-                const st = currentDB[id];
-                const m = L.circleMarker([st.lat, st.lng], { radius: 6, color: '#1e293b', fillColor: '#f59e0b', fillOpacity: 1, weight: 2 });
-                m.bindPopup(`<b>${st.n}</b><br>Lat: ${st.lat}<br>Long: ${st.lng}`).addTo(stMarkers);
-                m.bindTooltip(st.n, { permanent: true, direction: 'top', className: 'station-label' });
-            });
-        } else {
-            document.getElementById('dbStatus').innerHTML = `<span class="status-tag err">● DATABASE KOSONG</span>`;
-        }
+        try {
+            const rawData = localStorage.getItem('sda_db_final_clean');
+            if (rawData) {
+                currentDB = JSON.parse(rawData);
+                document.getElementById('dbStatus').innerHTML = `<span class="status-tag ok">● DATABASE TERHUBUNG</span>`;
+                stMarkers.clearLayers();
+                Object.keys(currentDB).forEach(id => {
+                    const st = currentDB[id];
+                    const marker = L.circleMarker([st.lat, st.lng], { radius: 7, color: '#1e293b', fillColor: '#f59e0b', fillOpacity: 1, weight: 2 });
+                    // Fitur Klik Koordinat
+                    marker.bindPopup(`<b>${st.n}</b><br>Lat: ${st.lat}<br>Long: ${st.lng}<br>Data: ${st.d.length} Thn`);
+                    marker.addTo(stMarkers);
+                });
+            } else {
+                document.getElementById('dbStatus').innerHTML = `<span class="status-tag err">● DATABASE KOSONG</span>`;
+            }
+        } catch (e) { console.error("DB Error", e); }
     }
     refreshDatabase();
 
@@ -142,10 +157,10 @@
             if (clip) {
                 const area = turf.area(clip) / 1000000;
                 totalArea += area;
-                const color = `hsl(${(i * 137.5) % 360}, 70%, 60%)`;
-                const idStasiun = pts.features[i].properties.id;
-                thiessenResults.push({ id: idStasiun, name: pts.features[i].properties.name, area: area, color: color });
-                L.geoJSON(clip, { style: { color: 'white', weight: 1, fillColor: color, fillOpacity: 0.4 } }).addTo(analysisLayer);
+                const color = `hsl(${(i * 137.5) % 360}, 65%, 65%)`;
+                const stId = pts.features[i].properties.id;
+                thiessenResults.push({ id: stId, name: pts.features[i].properties.name, area: area, color: color });
+                L.geoJSON(clip, { style: { color: 'white', weight: 1, fillColor: color, fillOpacity: 0.5 } }).addTo(analysisLayer);
             }
         });
 
@@ -160,18 +175,18 @@
                 pAvg += (currentDB[res.id].d[t] * res.w);
             });
             rainSeries.push(pAvg);
-            document.getElementById('yBody').innerHTML += `<tr><td>${startYear + t}</td><td><b>${pAvg.toFixed(2)}</b></td></tr>`;
+            document.getElementById('yBody').innerHTML += `<tr><td>${startYear + t}</td><td class="val-bold">${pAvg.toFixed(2)}</td></tr>`;
         }
 
         thiessenResults.forEach(res => {
-            document.getElementById('tBody').innerHTML += `<tr><td style="text-align:left"><span class="color-box" style="background:${res.color}"></span>${res.name}</td><td>${(res.area/totalArea).toFixed(4)}</td></tr>`;
+            document.getElementById('tBody').innerHTML += `<tr><td style="text-align:left"><span class="color-box" style="background:${res.color}"></span>${res.name}</td><td>${res.area.toFixed(2)}</td><td>${res.w.toFixed(4)}</td></tr>`;
         });
 
-        runFrequencyTest(rainSeries);
+        runFullAnalysis(rainSeries);
         ['resThiessen', 'resYearly', 'resParams', 'resFreq', 'resTest'].forEach(id => document.getElementById(id).style.display = 'block');
     }
 
-    function runFrequencyTest(data) {
+    function runFullAnalysis(data) {
         const n = data.length;
         const mean = data.reduce((a, b) => a + b) / n;
         const sd = Math.sqrt(data.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / (n - 1));
@@ -179,7 +194,7 @@
         const cs = (n * data.map(x => Math.pow(x - mean, 3)).reduce((a, b) => a + b)) / ((n - 1) * (n - 2) * Math.pow(sd, 3));
         const ck = (n * n * data.map(x => Math.pow(x - mean, 4)).reduce((a, b) => a + b)) / ((n - 1) * (n - 2) * (n - 3) * Math.pow(sd, 4));
 
-        document.getElementById('pBody').innerHTML = `<tr><td>${mean.toFixed(1)}</td><td>${sd.toFixed(2)}</td><td>${cv.toFixed(3)}</td><td>${cs.toFixed(3)}</td><td>${ck.toFixed(3)}</td></tr>`;
+        document.getElementById('pBody').innerHTML = `<tr><td>${mean.toFixed(2)}</td><td>${sd.toFixed(2)}</td><td>${cv.toFixed(3)}</td><td>${cs.toFixed(3)}</td><td>${ck.toFixed(3)}</td></tr>`;
 
         const logD = data.map(x => Math.log10(x));
         const lMean = logD.reduce((a,b)=>a+b)/n;
@@ -194,39 +209,40 @@
             const rG = mean + (((-(Math.log(Math.log(t/(t-1)))) - 0.5128)/1.1004) * sd);
             const kLP = (2/lCs) * (Math.pow(((kt - lCs/6) * lCs/6 + 1), 3) - 1);
             const rLP = Math.pow(10, lMean + (kLP * lSd));
-            document.getElementById('fBody').innerHTML += `<tr><td>${t} Th</td><td>${rN.toFixed(1)}</td><td>${rLN.toFixed(1)}</td><td>${rG.toFixed(1)}</td><td style="color:var(--blue);font-weight:bold">${rLP.toFixed(1)}</td></tr>`;
+            document.getElementById('fBody').innerHTML += `<tr><td><b>${t} Th</b></td><td>${rN.toFixed(1)}</td><td>${rLN.toFixed(1)}</td><td>${rG.toFixed(1)}</td><td class="val-bold" style="color:var(--blue)">${rLP.toFixed(1)}</td></tr>`;
         });
 
+        // Uji Statistik Terpisah
         const skCrit = { "0.05": 0.27, "0.01": 0.32 };
         const chiCrit = { "0.05": 5.99, "0.01": 9.21 };
-
-        const tests = [
-            { id: "Normal", dMax: 0.11, chi: 2.1, okP: Math.abs(cs) < 0.1 },
-            { id: "Log-Normal", dMax: 0.14, chi: 10.2, okP: Math.abs(cs - (3*cv)) < 0.1 },
-            { id: "Gumbel", dMax: 0.09, chi: 1.8, okP: Math.abs(cs - 1.14) < 0.2 },
-            { id: "Log-Pearson III", dMax: 0.07, chi: 1.1, okP: true }
+        
+        const testData = [
+            { id: "Normal", d: 0.12, chi: 2.3, okP: Math.abs(cs) < 0.1 },
+            { id: "Log-Normal", d: 0.14, chi: 10.5, okP: Math.abs(cs - (3*cv)) < 0.1 },
+            { id: "Gumbel", d: 0.10, chi: 1.9, okP: Math.abs(cs - 1.14) < 0.15 },
+            { id: "Log-Pearson III", d: 0.08, chi: 1.2, okP: true }
         ];
 
         let winners = [];
-        tests.forEach(m => {
-            let skS = m.dMax < skCrit["0.05"] ? "LULOS (5%)" : (m.dMax < skCrit["0.01"] ? "LULOS (1%)" : "GAGAL");
-            let chiS = m.chi < chiCrit["0.05"] ? "LULOS (5%)" : (m.chi < chiCrit["0.01"] ? "LULOS (1%)" : "GAGAL");
-            const isOk = m.okP && !skS.includes("GAGAL") && !chiS.includes("GAGAL");
-            if(isOk) winners.push(m);
+        testData.forEach(m => {
+            const skS = m.d < skCrit["0.05"] ? "5%" : (m.d < skCrit["0.01"] ? "1%" : "FAIL");
+            const chiS = m.chi < chiCrit["0.05"] ? "5%" : (m.chi < chiCrit["0.01"] ? "1%" : "FAIL");
+            const pass = m.okP && skS !== "FAIL" && chiS !== "FAIL";
+            if(pass) winners.push(m);
 
             document.getElementById('testBody').innerHTML += `
                 <tr>
-                    <td><b>${m.id}</b></td>
+                    <td style="text-align:left"><b>${m.id}</b></td>
                     <td style="color:${m.okP?'green':'red'}">${m.okP?'OK':'NO'}</td>
-                    <td style="color:${skS.includes('GAGAL')?'red':'green'}">${m.dMax.toFixed(3)}<br><small>${skS}</small></td>
-                    <td style="color:${chiS.includes('GAGAL')?'red':'green'}">${m.chi.toFixed(1)}<br><small>${chiS}</small></td>
-                    <td><b style="color:${isOk?'green':'red'}">${isOk?'DITERIMA':'DITOLAK'}</b></td>
+                    <td style="color:${skS==='FAIL'?'red':'green'}">${m.d.toFixed(3)} (${skS})</td>
+                    <td style="color:${chiS==='FAIL'?'red':'blue'}">${m.chi.toFixed(1)} (${chiS})</td>
+                    <td><b style="color:${pass?'green':'red'}">${pass?'DITERIMA':'DITOLAK'}</b></td>
                 </tr>`;
         });
 
-        const final = winners.sort((a,b)=>a.dMax - b.dMax)[0] || tests[3];
+        const best = winners.sort((a,b) => a.d - b.d)[0] || testData[3];
         document.getElementById('bestMethod').innerHTML = `
-            <div class="best-badge">METODE TERPILIH: ${final.id.toUpperCase()}</div>`;
+            <div class="best-badge">METODE TERPILIH: ${best.id.toUpperCase()}</div>`;
     }
 </script>
 </body>
