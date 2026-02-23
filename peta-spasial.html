@@ -125,6 +125,8 @@
                 const st = currentDB[id];
                 const marker = L.circleMarker([st.lat, st.lng], { radius: 6, color: '#1e293b', fillColor: '#f59e0b', fillOpacity: 1, weight: 2 });
                 marker.bindTooltip(st.n, { permanent: true, direction: 'top', offset: [0, -10], className: 'station-label' });
+                // --- KORDINAT DIKEMBALIKAN DISINI ---
+                marker.bindPopup(`<b>Stasiun: ${st.n}</b><br>Lat: ${st.lat}<br>Long: ${st.lng}`);
                 marker.addTo(stMarkers);
             });
         }
@@ -162,7 +164,7 @@
         voronoi.features.forEach((v, i) => {
             const clip = turf.intersect(v, mergedDAS);
             if (clip) {
-                const area = turf.area(clip) / 1000000; // km2
+                const area = turf.area(clip) / 1000000;
                 totalArea += area;
                 const color = `hsl(${(i * 137.5) % 360}, 75%, 65%)`;
                 const stId = pts.features[i].properties.id;
@@ -187,7 +189,6 @@
             document.getElementById('yBody').innerHTML += `<tr><td>${startYear + t}</td><td style="font-weight:bold">${pAvg.toFixed(2)}</td></tr>`;
         }
 
-        // --- UPDATE TABEL THIESSEN DENGAN LUAS & TOTAL ---
         let sumW = 0;
         thiessenResults.forEach(res => {
             sumW += res.w;
@@ -205,7 +206,6 @@
                 <td>${sumW.toFixed(0)}.0000</td>
             </tr>`;
 
-        // --- UPDATE GRAFIK ---
         updateChart(labelsYear, rainSeries);
 
         runFullAnalysis(rainSeries);
