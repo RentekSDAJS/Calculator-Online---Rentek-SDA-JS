@@ -108,38 +108,16 @@
     // Layer Groups
     let analysisLayer = L.layerGroup().addTo(map);
     let stMarkers = L.layerGroup().addTo(map);
-    let saluranLayer = L.layerGroup().addTo(map);
 
     // 2. Fitur Pencarian Lokasi
     L.Control.geocoder({ defaultMarkGeocode: true }).addTo(map);
 
     // 3. Kontrol Layer
     const baseMaps = { "Peta Jalan": osm, "Satelit": satelit };
-    const overlayMaps = { "Analisis Hidrologi": analysisLayer, "Stasiun Hujan": stMarkers, "Jalur Saluran": saluranLayer };
+    const overlayMaps = { "Analisis Hidrologi": analysisLayer, "Stasiun Hujan": stMarkers };
     L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
 
-    // 4. DATA SALURAN TERTANAM (Ganti isi 'features' dengan data GeoJSON Anda)
-    const dataSaluranTertanam = {
-        "type": "FeatureCollection",
-        "features": [
-            // Contoh data saluran, silakan timpa dengan GeoJSON saluran Anda
-            { "type": "Feature", "properties": { "Nama": "Saluran Induk Utama", "Debit_Rencana": "15 m3/s" }, "geometry": { "type": "LineString", "coordinates": [[106.82, -6.17], [106.85, -6.20]] } }
-        ]
-    };
-
-    function loadSaluran() {
-        L.geoJSON(dataSaluranTertanam, {
-            style: { color: "#2563eb", weight: 4, opacity: 0.8 },
-            onEachFeature: (f, l) => {
-                let txt = "<b>INFO SALURAN</b><hr>";
-                for (let key in f.properties) txt += `<b>${key}:</b> ${f.properties[key]}<br>`;
-                l.bindPopup(txt);
-            }
-        }).addTo(saluranLayer);
-    }
-    loadSaluran();
-
-    // 5. Logika Database & Analisis (YANG SUDAH DIKUNCI)
+    // 4. Logika Database & Analisis
     let currentDB = null;
     function refreshDatabase() {
         const rawData = localStorage.getItem('sda_db_final_clean');
