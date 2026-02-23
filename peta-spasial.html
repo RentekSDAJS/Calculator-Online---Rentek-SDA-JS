@@ -115,11 +115,14 @@
     let stMarkers = L.layerGroup().addTo(map);
     let layerMikro = L.layerGroup().addTo(map);
     let layerPHB = L.layerGroup().addTo(map);
+    
+    // --- LAYER BARU UNTUK PANAH ---
+    let layerPanah = L.layerGroup().addTo(map); 
+    
     let rainChart = null;
 
     L.Control.geocoder({ defaultMarkGeocode: true }).addTo(map);
 
-    // Fungsi Popup Atribut
     function createPopup(props, title) {
         let content = `<div style="min-width:200px"><strong>${title}</strong><hr><table class="popup-table">`;
         for (let key in props) {
@@ -129,40 +132,40 @@
         return content;
     }
 
-    // FUNGSI UTAMA LOAD SALURAN
+    // FUNGSI LOAD SALURAN DENGAN PEMISAHAN LAYER PANAH
     function initSaluran() {
-        // 1. Saluran Mikro (Cyan, 1.5)
         if (typeof dataMikro !== 'undefined') {
             const mGeo = L.geoJSON(dataMikro, {
                 style: { color: "cyan", weight: 1.5, opacity: 0.8 },
                 onEachFeature: (f, l) => { l.bindPopup(createPopup(f.properties, "DATA SALURAN MIKRO")); }
             }).addTo(layerMikro);
 
+            // Panah Mikro dimasukkan ke layerPanah
             L.polylineDecorator(mGeo, {
                 patterns: [{ offset: '10%', repeat: '100px', symbol: L.Symbol.arrowHead({pixelSize: 8, pathOptions: {color: 'red', fillOpacity: 1, weight: 0}}) }]
-            }).addTo(layerMikro);
+            }).addTo(layerPanah);
         }
 
-        // 2. Saluran PHB (Blue, 3)
         if (typeof dataTersier !== 'undefined') {
             const pGeo = L.geoJSON(dataTersier, {
                 style: { color: "blue", weight: 3, opacity: 0.9 },
                 onEachFeature: (f, l) => { l.bindPopup(createPopup(f.properties, "DATA SALURAN PHB")); }
             }).addTo(layerPHB);
 
+            // Panah PHB dimasukkan ke layerPanah
             L.polylineDecorator(pGeo, {
                 patterns: [{ offset: '10%', repeat: '100px', symbol: L.Symbol.arrowHead({pixelSize: 10, pathOptions: {color: 'red', fillOpacity: 1, weight: 0}}) }]
-            }).addTo(layerPHB);
+            }).addTo(layerPanah);
         }
     }
 
-    // Jalankan inisialisasi saluran
     initSaluran();
 
     const baseMaps = { "Peta Jalan": osm, "Satelit": satelit };
     const overlayMaps = { 
         "Saluran Mikro (Cyan)": layerMikro, 
         "Saluran PHB (Blue)": layerPHB, 
+        "Arah Aliran (Panah Merah)": layerPanah, // OPSI NYALA/MATI
         "Analisis Hidrologi": analysisLayer, 
         "Stasiun Hujan": stMarkers 
     };
