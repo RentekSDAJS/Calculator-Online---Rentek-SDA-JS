@@ -34,11 +34,10 @@
         .scroll-container { max-height: 150px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 5px; margin-bottom: 10px; }
         .best-badge { background: var(--main); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 15px; border-left: 5px solid var(--accent); }
         .color-box { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.1); }
-        
-        /* Style tambahan untuk popup tabel atribut */
         .popup-table { width: 100%; font-size: 11px; }
         .popup-table tr:nth-child(even) { background: #f8fafc; }
-        .popup-table th { text-align: left; background: #eee; width: 40%; }
+        .popup-table th { text-align: left; background: #eee; width: 40%; padding: 4px; }
+        .popup-table td { text-align: left; padding: 4px; border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
@@ -115,15 +114,17 @@
 
     let analysisLayer = L.layerGroup().addTo(map);
     let stMarkers = L.layerGroup().addTo(map);
+    
+    // Inisialisasi LayerGroup untuk Saluran
     let layerMikro = L.layerGroup().addTo(map);
     let layerPHB = L.layerGroup().addTo(map);
+    
     let rainChart = null;
 
     L.Control.geocoder({ defaultMarkGeocode: true }).addTo(map);
 
-    // Fungsi pembantu untuk membuat tabel popup dari semua atribut
     function createAttrTable(props, title) {
-        let html = `<div style="max-height:200px; overflow-y:auto;"><b style="color:var(--blue)">${title}</b><table class="popup-table">`;
+        let html = `<div style="max-height:200px; overflow-y:auto; width:250px;"><b style="color:var(--blue)">${title}</b><table class="popup-table">`;
         for (let key in props) {
             html += `<tr><th>${key}</th><td>${props[key]}</td></tr>`;
         }
@@ -131,38 +132,40 @@
         return html;
     }
 
-    // Fungsi menambahkan panah arah aliran
-    function addArrows(lineLayer) {
-        L.polylineDecorator(lineLayer, {
-            patterns: [
-                { 
-                    offset: '20px', 
-                    repeat: '100px', 
-                    symbol: L.Symbol.arrowHead({pixelSize: 8, polygon: false, pathOptions: {stroke: true, color: 'red', weight: 2}}) 
-                }
-            ]
-        }).addTo(map);
-    }
-
     // --- PROSES SALURAN MIKRO (Cyan, 1.5) ---
     if (typeof dataMikro !== 'undefined') {
-        L.geoJSON(dataMikro, {
+        const geoJsonMikro = L.geoJSON(dataMikro, {
             style: { color: "cyan", weight: 1.5, opacity: 0.8 },
             onEachFeature: (f, l) => {
                 l.bindPopup(createAttrTable(f.properties, "SALURAN MIKRO"));
-                addArrows(l);
             }
+        });
+        
+        // Memasukkan GeoJSON dan Decorator ke dalam LayerGroup yang sama
+        geoJsonMikro.addTo(layerMikro);
+        L.polylineDecorator(geoJsonMikro, {
+            patterns: [{ 
+                offset: '20px', repeat: '100px', 
+                symbol: L.Symbol.arrowHead({pixelSize: 8, polygon: false, pathOptions: {stroke: true, color: 'red', weight: 2}}) 
+            }]
         }).addTo(layerMikro);
     }
 
     // --- PROSES SALURAN PHB (Blue, 3) ---
     if (typeof dataTersier !== 'undefined') {
-        L.geoJSON(dataTersier, {
+        const geoJsonPHB = L.geoJSON(dataTersier, {
             style: { color: "blue", weight: 3, opacity: 0.9 },
             onEachFeature: (f, l) => {
                 l.bindPopup(createAttrTable(f.properties, "SALURAN PHB"));
-                addArrows(l);
             }
+        });
+
+        geoJsonPHB.addTo(layerPHB);
+        L.polylineDecorator(geoJsonPHB, {
+            patterns: [{ 
+                offset: '20px', repeat: '100px', 
+                symbol: L.Symbol.arrowHead({pixelSize: 8, polygon: false, pathOptions: {stroke: true, color: 'red', weight: 2}}) 
+            }]
         }).addTo(layerPHB);
     }
 
