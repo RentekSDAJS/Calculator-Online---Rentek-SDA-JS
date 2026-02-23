@@ -30,7 +30,6 @@
         .scroll-container { max-height: 150px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 5px; margin-bottom: 10px; }
         .best-badge { background: var(--main); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 15px; border-left: 5px solid var(--accent); }
         .color-box { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.1); }
-        canvas { width: 100% !important; height: auto !important; }
     </style>
 </head>
 <body>
@@ -49,7 +48,13 @@
     <div id="resThiessen" class="card" style="display:none">
         <h3>2. Koefisien Thiessen & Warna DAS</h3>
         <table>
-            <thead><tr><th style="text-align:left">Stasiun</th><th>Luas (km²)</th><th>Bobot (W)</th></tr></thead>
+            <thead>
+                <tr>
+                    <th style="text-align:left">Stasiun</th>
+                    <th>Luas (km²)</th>
+                    <th>Bobot (W)</th>
+                </tr>
+            </thead>
             <tbody id="tBody"></tbody>
             <tfoot id="tFoot"></tfoot>
         </table>
@@ -63,7 +68,8 @@
                 <tbody id="yBody"></tbody>
             </table>
         </div>
-        <canvas id="rainChart"></canvas> </div>
+        <canvas id="rainChart" style="margin-top:15px;"></canvas>
+    </div>
 
     <div id="resParams" class="card" style="display:none">
         <h3>4. Parameter Statistik Wilayah</h3>
@@ -100,7 +106,7 @@
 
     let analysisLayer = L.layerGroup().addTo(map);
     let stMarkers = L.layerGroup().addTo(map);
-    let rainChart = null; // Variable untuk menyimpan instance chart
+    let rainChart = null;
 
     L.Control.geocoder({ defaultMarkGeocode: true }).addTo(map);
 
@@ -150,12 +156,13 @@
 
         const pts = turf.featureCollection(Object.keys(currentDB).map(id => turf.point([currentDB[id].lng, currentDB[id].lat], { name: currentDB[id].n, id: id })));
         const voronoi = turf.voronoi(pts, { bbox: turf.bbox(mergedDAS) });
+        
         let thiessenResults = [], totalArea = 0;
 
         voronoi.features.forEach((v, i) => {
             const clip = turf.intersect(v, mergedDAS);
             if (clip) {
-                const area = turf.area(clip) / 1000000;
+                const area = turf.area(clip) / 1000000; // km2
                 totalArea += area;
                 const color = `hsl(${(i * 137.5) % 360}, 75%, 65%)`;
                 const stId = pts.features[i].properties.id;
@@ -175,28 +182,39 @@
                 res.w = res.area / totalArea;
                 pAvg += (currentDB[res.id].d[t] * res.w);
             });
-            rainSeries.push(pAvg.toFixed(2));
+            rainSeries.push(Number(pAvg.toFixed(2)));
             labelsYear.push(startYear + t);
             document.getElementById('yBody').innerHTML += `<tr><td>${startYear + t}</td><td style="font-weight:bold">${pAvg.toFixed(2)}</td></tr>`;
         }
 
-        // Tampilkan grafik tren hujan
-        renderChart(labelsYear, rainSeries);
-
+        // --- UPDATE TABEL THIESSEN DENGAN LUAS & TOTAL ---
         let sumW = 0;
         thiessenResults.forEach(res => {
             sumW += res.w;
-            document.getElementById('tBody').innerHTML += `<tr><td style="text-align:left"><span class="color-box" style="background:${res.color}"></span>${res.name}</td><td>${res.area.toFixed(2)}</td><td>${res.w.toFixed(4)}</td></tr>`;
+            document.getElementById('tBody').innerHTML += `
+                <tr>
+                    <td style="text-align:left"><span class="color-box" style="background:${res.color}"></span>${res.name}</td>
+                    <td>${res.area.toFixed(2)}</td>
+                    <td>${res.w.toFixed(4)}</td>
+                </tr>`;
         });
-        document.getElementById('tFoot').innerHTML = `<tr class="tfoot-bold"><td style="text-align:left">TOTAL</td><td>${totalArea.toFixed(2)}</td><td>${sumW.toFixed(0)}.0000</td></tr>`;
+        document.getElementById('tFoot').innerHTML = `
+            <tr class="tfoot-bold">
+                <td style="text-align:left">TOTAL</td>
+                <td>${totalArea.toFixed(2)}</td>
+                <td>${sumW.toFixed(0)}.0000</td>
+            </tr>`;
 
-        runFullAnalysis(rainSeries.map(Number));
+        // --- UPDATE GRAFIK ---
+        updateChart(labelsYear, rainSeries);
+
+        runFullAnalysis(rainSeries);
         ['resThiessen', 'resYearly', 'resParams', 'resFreq', 'resTest'].forEach(id => document.getElementById(id).style.display = 'block');
     }
 
-    function renderChart(labels, data) {
+    function updateChart(labels, data) {
         const ctx = document.getElementById('rainChart').getContext('2d');
-        if (rainChart) rainChart.destroy(); // Hapus chart lama sebelum membuat baru
+        if (rainChart) rainChart.destroy();
         rainChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -206,14 +224,18 @@
                     data: data,
                     borderColor: '#2563eb',
                     backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    borderWidth: 2,
                     fill: true,
-                    tension: 0.3
+                    tension: 0.4
                 }]
             },
             options: {
                 responsive: true,
                 plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: false, ticks: { font: { size: 9 } } }, x: { ticks: { font: { size: 9 } } } }
+                scales: { 
+                    y: { beginAtZero: false, ticks: { font: { size: 9 } } },
+                    x: { ticks: { font: { size: 9 } } }
+                }
             }
         });
     }
