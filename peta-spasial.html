@@ -11,33 +11,26 @@
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         :root { --main: #1e293b; --accent: #f59e0b; --green: #059669; --red: #dc2626; --blue: #2563eb; }
         body { margin: 0; display: flex; font-family: 'Segoe UI', sans-serif; height: 100vh; background: #f1f5f9; }
-        
         #map { flex: 2; z-index: 1; }
         #panel { flex: 1; padding: 20px; background: white; overflow-y: auto; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 2; border-left: 5px solid var(--main); }
-        
         .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
         .upload-btn { background: var(--main); color: white; padding: 10px; width: 100%; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; margin-bottom: 5px; font-size: 12px; }
-        
         h2 { margin-top: 0; color: var(--main); font-size: 1.4rem; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
         h3 { font-size: 10px; text-transform: uppercase; color: #64748b; margin: 0 0 10px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
-        
         table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; }
         th { background: #f1f5f9; color: #475569; padding: 8px; border: 1px solid #e2e8f0; }
         td { padding: 8px; border: 1px solid #e2e8f0; text-align: center; }
-        
-        .station-label {
-            background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #1e293b !important;
-            border-radius: 3px !important; padding: 1px 4px !important; font-weight: 800 !important;
-            color: #1e293b !important; font-size: 11px !important; box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-        }
-        
-        .scroll-container { max-height: 150px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 5px; }
+        .tfoot-bold { background: #f1f5f9; font-weight: bold; color: var(--main); }
+        .station-label { background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #1e293b !important; border-radius: 3px !important; padding: 1px 4px !important; font-weight: 800 !important; color: #1e293b !important; font-size: 11px !important; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
+        .scroll-container { max-height: 150px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 5px; margin-bottom: 10px; }
         .best-badge { background: var(--main); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 15px; border-left: 5px solid var(--accent); }
         .color-box { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.1); }
+        canvas { width: 100% !important; height: auto !important; }
     </style>
 </head>
 <body>
@@ -56,20 +49,21 @@
     <div id="resThiessen" class="card" style="display:none">
         <h3>2. Koefisien Thiessen & Warna DAS</h3>
         <table>
-            <thead><tr><th style="text-align:left">Stasiun</th><th>Bobot (W)</th></tr></thead>
+            <thead><tr><th style="text-align:left">Stasiun</th><th>Luas (km²)</th><th>Bobot (W)</th></tr></thead>
             <tbody id="tBody"></tbody>
+            <tfoot id="tFoot"></tfoot>
         </table>
     </div>
 
     <div id="resYearly" class="card" style="display:none">
-        <h3>3. Hujan Rerata Wilayah (Sejak 2000)</h3>
+        <h3>3. Tren Hujan Rerata Wilayah</h3>
         <div class="scroll-container">
             <table>
                 <thead><tr><th>Tahun</th><th>Hujan (mm)</th></tr></thead>
                 <tbody id="yBody"></tbody>
             </table>
         </div>
-    </div>
+        <canvas id="rainChart"></canvas> </div>
 
     <div id="resParams" class="card" style="display:none">
         <h3>4. Parameter Statistik Wilayah</h3>
@@ -100,24 +94,20 @@
 <script>
     proj4.defs("EPSG:32748", "+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs");
     
-    // 1. Inisialisasi Peta & Basemaps
     const map = L.map('map').setView([-6.20, 106.84], 12);
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     const satelit = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
-    // Layer Groups
     let analysisLayer = L.layerGroup().addTo(map);
     let stMarkers = L.layerGroup().addTo(map);
+    let rainChart = null; // Variable untuk menyimpan instance chart
 
-    // 2. Fitur Pencarian Lokasi
     L.Control.geocoder({ defaultMarkGeocode: true }).addTo(map);
 
-    // 3. Kontrol Layer
     const baseMaps = { "Peta Jalan": osm, "Satelit": satelit };
     const overlayMaps = { "Analisis Hidrologi": analysisLayer, "Stasiun Hujan": stMarkers };
     L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
 
-    // 4. Logika Database & Analisis
     let currentDB = null;
     function refreshDatabase() {
         const rawData = localStorage.getItem('sda_db_final_clean');
@@ -129,7 +119,6 @@
                 const st = currentDB[id];
                 const marker = L.circleMarker([st.lat, st.lng], { radius: 6, color: '#1e293b', fillColor: '#f59e0b', fillOpacity: 1, weight: 2 });
                 marker.bindTooltip(st.n, { permanent: true, direction: 'top', offset: [0, -10], className: 'station-label' });
-                marker.bindPopup(`Lat: ${st.lat}<br>Long: ${st.lng}`);
                 marker.addTo(stMarkers);
             });
         }
@@ -146,7 +135,7 @@
 
     function processHydrology(json) {
         analysisLayer.clearLayers();
-        ['tBody', 'yBody', 'pBody', 'fBody', 'testBody'].forEach(id => document.getElementById(id).innerHTML = "");
+        ['tBody', 'tFoot', 'yBody', 'pBody', 'fBody', 'testBody'].forEach(id => document.getElementById(id).innerHTML = "");
 
         let features = json.features || (json.geometries ? json.geometries.map(g => ({type:"Feature", geometry:g, properties:{}})) : [json]);
         let mergedDAS;
@@ -176,6 +165,7 @@
         });
 
         let rainSeries = [];
+        let labelsYear = [];
         const startYear = 2000;
         const thnCount = currentDB[Object.keys(currentDB)[0]].d.length;
 
@@ -185,16 +175,47 @@
                 res.w = res.area / totalArea;
                 pAvg += (currentDB[res.id].d[t] * res.w);
             });
-            rainSeries.push(pAvg);
+            rainSeries.push(pAvg.toFixed(2));
+            labelsYear.push(startYear + t);
             document.getElementById('yBody').innerHTML += `<tr><td>${startYear + t}</td><td style="font-weight:bold">${pAvg.toFixed(2)}</td></tr>`;
         }
 
-        thiessenResults.forEach(res => {
-            document.getElementById('tBody').innerHTML += `<tr><td style="text-align:left"><span class="color-box" style="background:${res.color}"></span>${res.name}</td><td>${res.w.toFixed(4)}</td></tr>`;
-        });
+        // Tampilkan grafik tren hujan
+        renderChart(labelsYear, rainSeries);
 
-        runFullAnalysis(rainSeries);
+        let sumW = 0;
+        thiessenResults.forEach(res => {
+            sumW += res.w;
+            document.getElementById('tBody').innerHTML += `<tr><td style="text-align:left"><span class="color-box" style="background:${res.color}"></span>${res.name}</td><td>${res.area.toFixed(2)}</td><td>${res.w.toFixed(4)}</td></tr>`;
+        });
+        document.getElementById('tFoot').innerHTML = `<tr class="tfoot-bold"><td style="text-align:left">TOTAL</td><td>${totalArea.toFixed(2)}</td><td>${sumW.toFixed(0)}.0000</td></tr>`;
+
+        runFullAnalysis(rainSeries.map(Number));
         ['resThiessen', 'resYearly', 'resParams', 'resFreq', 'resTest'].forEach(id => document.getElementById(id).style.display = 'block');
+    }
+
+    function renderChart(labels, data) {
+        const ctx = document.getElementById('rainChart').getContext('2d');
+        if (rainChart) rainChart.destroy(); // Hapus chart lama sebelum membuat baru
+        rainChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Curah Hujan (mm)',
+                    data: data,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: false, ticks: { font: { size: 9 } } }, x: { ticks: { font: { size: 9 } } } }
+            }
+        });
     }
 
     function runFullAnalysis(data) {
@@ -239,15 +260,7 @@
             const chiS = m.chi < chiCrit["0.05"] ? "5%" : (m.chi < chiCrit["0.01"] ? "1%" : "FAIL");
             const pass = m.okP && skS !== "FAIL" && chiS !== "FAIL";
             if(pass) winners.push(m);
-
-            document.getElementById('testBody').innerHTML += `
-                <tr>
-                    <td style="text-align:left"><b>${m.id}</b></td>
-                    <td style="color:${m.okP?'green':'red'}">${m.okP?'OK':'NO'}</td>
-                    <td style="color:${skS==='FAIL'?'red':'green'}">${m.d.toFixed(3)} (${skS})</td>
-                    <td style="color:${chiS==='FAIL'?'red':'green'}">${m.chi.toFixed(1)} (${chiS})</td>
-                    <td><b style="color:${pass?'green':'red'}">${pass?'DITERIMA':'DITOLAK'}</b></td>
-                </tr>`;
+            document.getElementById('testBody').innerHTML += `<tr><td style="text-align:left"><b>${m.id}</b></td><td style="color:${m.okP?'green':'red'}">${m.okP?'OK':'NO'}</td><td style="color:${skS==='FAIL'?'red':'green'}">${m.d.toFixed(3)} (${skS})</td><td style="color:${chiS==='FAIL'?'red':'green'}">${m.chi.toFixed(1)} (${chiS})</td><td><b style="color:${pass?'green':'red'}">${pass?'DITERIMA':'DITOLAK'}</b></td></tr>`;
         });
 
         const best = winners.sort((a,b) => a.d - b.d)[0] || testData[3];
